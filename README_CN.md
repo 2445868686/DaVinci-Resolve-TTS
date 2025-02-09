@@ -49,8 +49,7 @@
 
 ## 使用教程 💡
 
-<img width="450" alt="截屏2025-02-08 09 04 07" src="https://github.com/user-attachments/assets/174e4453-1398-4026-80a0-88874dc00b2c" />
-<img width="450" alt="截屏2025-02-08 09 04 10" src="https://github.com/user-attachments/assets/b943cde6-6885-4c5e-9395-d7d536e6871c" />
+<img width="800" alt="截屏2025-02-08 09 04 10" src="https://github.com/user-attachments/assets/b943cde6-6885-4c5e-9395-d7d536e6871c" />
 
 1. **启动插件**  
     - 在 DaVinci Resolve 工作区-脚本中运行后，会弹出主窗口。窗口中包含多个标签页，分别用于 Azure TTS、MiniMax TTS 以及配置信息与使用帮助。
