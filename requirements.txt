@@ -1,0 +1,4 @@
+requests
+edge_tts
+azure-cognitiveservices-speech
+pypinyin
