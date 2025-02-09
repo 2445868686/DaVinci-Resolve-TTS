@@ -1,12 +1,17 @@
-# DaVinci Resolve TTS 插件
-## 项目介绍
-**[English](README.md) | 简体中文**
+<div align="center">
+    
+# <span style="color: #2ecc71;">DaVinci Resolve TTS 插件 🎤✨</span>
+
+**[English](README.md) | [简体中文](README_CN.md)**
+</div>
+
+## 项目介绍 🚀
 
 本项目基于 DaVinci Resolve 的脚本接口和 Fusion UI 构建了一个图形界面插件，实现了在DaVinci Resolve软件中文本转语音（TTS）功能。插件支持微软 [Azure's TTS](https://speech.microsoft.com/) 与 [MiniMax TTS](https://intl.minimaxi.com/) 两种语音合成服务，并提供多种参数配置（如语速、音调、音量、风格、停顿等）以及从时间线/文本框获取字幕后直接生成语音并加载到时间线的完整流程。
 
 ![TTS](https://github.com/user-attachments/assets/0626ed7e-40c9-4b8f-92ee-736ca6756619)
 
-## 项目特点
+## 项目特点🎉
 
 - **多服务支持**
     - 集成微软 [Azure's TTS](https://speech.microsoft.com/) 与 [MiniMax TTS](https://intl.minimaxi.com/) 服务，可根据需求自由切换。
@@ -20,7 +25,7 @@
 - **与 DaVinci Resolve 无缝集成**
     - 可直接从时间线提取字幕，并将合成后的音频自动添加至媒体池和当前时间线。
 
-## 安装步骤
+## 安装步骤 🔧
 
 1. **下载代码**  
     克隆本仓库到本地：
@@ -42,7 +47,7 @@
 	C:\ProgramData\Blackmagic Design\DaVinci Resolve\Fusion\Scripts\Edit
 	```
 
-## 使用教程
+## 使用教程 💡
 
 <img width="450" alt="截屏2025-02-08 09 04 07" src="https://github.com/user-attachments/assets/174e4453-1398-4026-80a0-88874dc00b2c" />
 <img width="450" alt="截屏2025-02-08 09 04 10" src="https://github.com/user-attachments/assets/b943cde6-6885-4c5e-9395-d7d536e6871c" />
@@ -67,16 +72,26 @@
     - “发音”按钮：复制文本后利用 pypinyin 库生成带声调的拼音，有助于控制多音字的发音。
     - “播放预览”按钮：试听语音效果。
 
-## 注意事项
+## 注意事项⚠️
 
 - 请确保 API 密钥、区域等信息填写正确，否则语音合成将无法正常进行。
 - 在使用过程中，如遇到问题请查看控制台输出日志，日志中包含详细的错误信息。
 - 文件保存路径需要具有写入权限，否则可能导致音频文件保存失败。
 
-## 贡献
+## 贡献🤝
 
 欢迎任何形式的贡献！如有问题、建议或 bug，请通过 GitHub issue 与我联系，或直接提交 pull request。
 
-## 许可
+## **支持 ❤️**  
 
-本项目采用 MIT 许可证，详情请参阅 LICENSE 文件。
+🚀 **热爱开源与 AI 创新？** 这个项目致力于让 AI 工具更加**实用**和**易用**，所有软件都是**完全免费**且**开源**的，旨在回馈社区，让更多人受益！  
+
+如果你觉得这个项目对你有所帮助，欢迎支持我的工作！你的支持将帮助我持续开发，并带来更多令人兴奋的新功能！💡✨  
+
+<img width="200" alt="A031269C-141F-4338-95F1-6018D40E0A3F" src="https://github.com/2445868686/Davinci-Resolve-SD-Text-to-Image/assets/50979290/a17d3ade-7486-4b3f-9b19-1d2d0c4b6945">
+
+
+
+## 许可 📄
+
+本项目采用 MIT 许可证，详情请参阅 [LICENSE](LICENSE) 文件。
