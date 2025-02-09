@@ -49,8 +49,7 @@ This project builds a graphical interface plugin based on DaVinci Resolve's scri
 
 ## Usage 💡
 
-<img width="450" alt="截屏2025-02-08 09 04 07" src="https://github.com/user-attachments/assets/174e4453-1398-4026-80a0-88874dc00b2c" />
-<img width="450" alt="截屏2025-02-08 09 04 10" src="https://github.com/user-attachments/assets/b943cde6-6885-4c5e-9395-d7d536e6871c" />
+<img width="800" alt="截屏2025-02-08 09 04 10" src="https://github.com/user-attachments/assets/b943cde6-6885-4c5e-9395-d7d536e6871c" />
 
 1. **Launch the Plugin**  
     - After running the script in DaVinci Resolve's workspace, a main window will pop up. The window contains multiple tabs for Azure TTS, MiniMax TTS, configuration settings, and usage help.
