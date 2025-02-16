@@ -257,6 +257,7 @@ class STATUS_MESSAGES:
     select_save_path    = ("Select a save path in the configuration panel.", "前往配置栏选择保存路径.")
     unsupported_audio   = ("Unsupported audio format selected.", "不支持的音频格式.")
     create_timeline     = ("Please create a timeline first!", "请先创建时间线！")
+    reset_status        = ("", "")
 
 def check_or_create_file(file_path):
     if os.path.exists(file_path):
@@ -530,7 +531,7 @@ win = dispatcher.AddWindow({
                             ui.HGroup({}, [
                                 ui.Label({"ID": "minimaxVoiceLabel","Text": "人声:", "Weight": 0}),
                                 ui.ComboBox({"ID": "minimaxVoiceCombo", "Text": "选择人声"}),
-                                ui.Button({"ID": "minimaxPlayButton", "Text": "试听"}),
+                                ui.Button({"ID": "minimaxPreviewButton", "Text": "试听"}),
                             ]),
                             ui.HGroup({}, [
                                 ui.Label({"ID": "minimaxEmotionLabel","Text": "情绪:", "Weight": 0}),
@@ -590,8 +591,8 @@ win = dispatcher.AddWindow({
                             
                         ]),
                         ui.HGroup({"Weight": 0.1}, [
-                            ui.CheckBox({"ID": "LangCnCheckBox", "Text": "CN", "Checked": False, "Alignment": {"AlignRight": True}, "Weight": 0}),
-                            ui.CheckBox({"ID": "LangEnCheckBox", "Text": "EN", "Checked": True, "Alignment": {"AlignRight": True}, "Weight": 1}),
+                            ui.CheckBox({"ID": "LangEnCheckBox", "Text": "EN", "Checked": True, "Alignment": {"AlignRight": True}, "Weight": 0}),
+                            ui.CheckBox({"ID": "LangCnCheckBox", "Text": "简体中文", "Checked": False, "Alignment": {"AlignRight": True}, "Weight": 1}),
                         ]),
                         ui.Button({
                             "ID": "OpenLinkButton", 
@@ -694,7 +695,7 @@ translations = {
         "AlphabetButton": "发音",
         "minimaxModelLabel": "模型",
         "minimaxVoiceLabel": "人声",
-        "minimaxPlayButton":"试听",
+        "minimaxPreviewButton":"试听",
         "LanguageLabel": "语言",
         "NameTypeLabel": "类型",
         "NameLabel": "名称",
@@ -747,7 +748,7 @@ translations = {
         "AlphabetButton": "Pronunciation",
         "minimaxModelLabel": "Model",
         "minimaxVoiceLabel": "Voice",
-        "minimaxPlayButton":"Preview",
+        "minimaxPreviewButton":"Preview",
         "LanguageLabel": "Language",
         "NameTypeLabel": "Type",
         "NameLabel": "Name",
@@ -5954,6 +5955,8 @@ if saved_settings:
 
 if items["LangEnCheckBox"].Checked :
     switch_language("en")
+else:
+    switch_language("cn")
 
 
 for cn, en in NameTypeMapping.items():
@@ -6706,10 +6709,9 @@ def on_play_button_clicked(ev):
     
     result = synthesize_speech(service_region, speech_key, lang, voice_name, subtitle, rate, volume, style, style_degree, multilingual,pitch,audio_format, audio_output_config)
     stream = speechsdk.AudioDataStream(result)
-
     if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
         flagmark()
-        update_status("")
+        update_status(STATUS_MESSAGES.reset_status)
     elif result.reason == speechsdk.ResultReason.Canceled:
         cancellation_details = result.cancellation_details
         update_status(STATUS_MESSAGES.synthesis_failed)
@@ -6764,7 +6766,7 @@ def play_audio_segment(pcm_file, json_file, voice_name, sample_rate=32000, chann
         os.remove(wav_file)
         print(f"播放失败: {e}")
 
-def on_play_button_click(ev):
+def on_minimax_preview_button_click(ev):
     try:
         # 请确保文件路径正确
         pcm_file = os.path.join(script_path, "minimax_voice_data.pcm")  # 拼接完整路径
@@ -6783,7 +6785,7 @@ def on_play_button_click(ev):
 
     except Exception as e:
         print(f"播放失败: {e}")
-win.On.minimaxPlayButton.Clicked = on_play_button_click
+win.On.minimaxPreviewButton.Clicked = on_minimax_preview_button_click
 
 def process_minimax_request(text_func, timeline_func):
     """
