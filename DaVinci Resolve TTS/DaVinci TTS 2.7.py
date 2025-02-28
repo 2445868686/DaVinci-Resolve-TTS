@@ -6759,6 +6759,7 @@ def play_audio_segment(pcm_file, json_file, voice_name, sample_rate=32000, chann
             subprocess.run(['afplay', wav_file], check=True)
 
         # 删除临时 WAV 文件
+        time.sleep(1)  # 等待1秒钟
         os.remove(wav_file)
         print(f"播放完成: {voice_name}")
     
@@ -6890,11 +6891,12 @@ def process_minimax_request(text_func, timeline_func):
 
     except requests.exceptions.RequestException as e:
         print(f"请求失败: {e}")
-        
-        print("详细信息:", e.response.text if e.response else "无详细信息")
+        update_status(STATUS_MESSAGES.synthesis_failed)
     except json.JSONDecodeError as e:
+        update_status(STATUS_MESSAGES.synthesis_failed)
         print(f"JSON解析失败: {e}")
     except KeyError as e:
+        update_status(STATUS_MESSAGES.synthesis_failed)
         print(f"响应中缺少关键字段: {e}")
 
 
