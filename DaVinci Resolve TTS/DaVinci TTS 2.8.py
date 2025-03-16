@@ -35,7 +35,19 @@ infomsg_cn = """
     </style>
 </head>
 <body>
-    <h3>更新[2.7 beta] 2025-01-18</h3>
+    <h3>更新[2.8] 2025-03-16</h3>
+    
+        <li>-微软语音</li>
+        <ul>
+            <li>新增13种HD高清语音</li> 
+        </ul>
+        <li>-海螺语音</li>
+        <ul>
+            <li>新增语种选项，增强对指定的小语种和方言的识别能力！</li> 
+            <li>新增字幕功能，生成音频文件对应的时间戳字幕！</li> 
+        </ul>
+        
+    <h3>更新[2.7] 2025-01-18</h3>
     
         <li>-新增MiniMax 语音模型！</li>
         <ul>
@@ -139,6 +151,16 @@ infomsg_en = """
     </style>
 </head>
 <body>
+    <h3>Update [2.8] 2025-03-16</h3>
+        <li>-Microsoft TTS</li>
+        <ul>
+            <li>Added 13 new HD voices.</li>
+        </ul>
+        <li>-Minimax TTS</li>
+        <ul>
+            <li>Introduced new language options, improving recognition of specific lesser-known languages and dialects.</li>
+            <li>Added a subtitle generation feature, allowing the creation of subtitles with timestamps for audio files.</li>
+        </ul>
     <h3>Update [2.7 beta] 2025-01-18</h3>
     
         <li>- Added MiniMax voice model!</li>
@@ -324,6 +346,8 @@ default_settings = {
     "minimax_Model": 0,
     #"Text": "",
     "minimax_Voice": 0,
+    "minimax_Language": 0,
+    "minimax_SubtitleCheckBox":False,
     "minimax_Emotion": 0,
     "minimax_Rate": 1.0,
     "minimax_Volume": 1.0,
@@ -425,13 +449,13 @@ ui = fusion.UIManager
 dispatcher = bmd.UIDispatcher(ui)
 screen_width = 1920
 screen_height = 1080
-window_width = 780
+window_width = 800
 window_height = 400
 x_center = (screen_width - window_width) // 2
 y_center = (screen_height - window_height) // 2
 win = dispatcher.AddWindow({
     "ID": "MainWin", 
-    "WindowTitle": "DaVinci TTS 2.7", 
+    "WindowTitle": "DaVinci TTS 2.8", 
     "Geometry": [x_center, y_center, window_width, window_height],
     "Spacing": 10,
     "StyleSheet": """
@@ -526,7 +550,9 @@ win = dispatcher.AddWindow({
                         ui.VGroup({"Weight": 0.5}, [
                             ui.HGroup({}, [
                                 ui.Label({"ID": "minimaxModelLabel","Text": "模型:", "Weight": 0}),
-                                ui.ComboBox({"ID": "minimaxModelCombo", "Text": "选择模型"})
+                                ui.ComboBox({"ID": "minimaxModelCombo", "Text": "选择模型"}),
+                                ui.Label({"ID": "minimaxLanguageLabel","Text": "语言:", "Weight": 0}),
+                                ui.ComboBox({"ID": "minimaxLanguageCombo", "Text": "选择语言"})
                             ]),
                             ui.HGroup({}, [
                                 ui.Label({"ID": "minimaxVoiceLabel","Text": "人声:", "Weight": 0}),
@@ -554,7 +580,8 @@ win = dispatcher.AddWindow({
                             ]),
                             ui.HGroup({}, [
                                 ui.Label({"ID": "minimaxFormatLabel","Text": "格式:", "Weight": 0}),
-                                ui.ComboBox({"ID": "minimaxFormatCombo", "Text": "选择格式"})
+                                ui.ComboBox({"ID": "minimaxFormatCombo", "Text": "选择格式"}),
+                                ui.CheckBox({"ID": "minimaxSubtitleCheckBox", "Text": "生成字幕", "Checked": False, "Alignment": {"AlignLeft": True}, "Weight": 0.1}),
                             ]),
                             ui.HGroup({}, [
                                 ui.Button({"ID": "minimaxFromSubButton", "Text": "朗读当前字幕"}),
@@ -694,6 +721,7 @@ translations = {
         "minimaxBreakButton": "停顿",
         "AlphabetButton": "发音",
         "minimaxModelLabel": "模型",
+        "minimaxLanguageLabel": "语言",
         "minimaxVoiceLabel": "人声",
         "minimaxPreviewButton":"试听",
         "LanguageLabel": "语言",
@@ -728,6 +756,7 @@ translations = {
         "RegionLabel":"区域",
         "ApiKeyLabel":"密钥",
         "UnuseAPICheckBox":"停用 API",
+        "minimaxSubtitleCheckBox":"生成字幕",
         "AzureConfirm":"确定",
         "AzureRegisterButton":"注册",
         "minimaxLabel":"填写MiniMax API信息",
@@ -747,6 +776,7 @@ translations = {
         "minimaxBreakButton": "Break",
         "AlphabetButton": "Pronunciation",
         "minimaxModelLabel": "Model",
+        "minimaxLanguageLabel": "Language",
         "minimaxVoiceLabel": "Voice",
         "minimaxPreviewButton":"Preview",
         "LanguageLabel": "Language",
@@ -781,6 +811,7 @@ translations = {
         "RegionLabel":"Region",
         "ApiKeyLabel":"Key",
         "UnuseAPICheckBox":"Unuse API",
+        "minimaxSubtitleCheckBox":"Subtitle Enable",
         "AzureConfirm":"OK",
         "AzureRegisterButton":"Register",
         "minimaxLabel":"MiniMax API",
@@ -897,7 +928,27 @@ minimax_voices = [
     ("Sweet Girl 2（海外）", "Sweet_Girl_2"),
     ("Exuberant Girl（海外）", "Exuberant_Girl"),
 ]
+minimax_language = [
+    ("自动", "auto"),
+    ("中文", "Chinese"),
+    ("粤语", "Chinese,Yue"),
+    ("英语", "English"),
+    ("阿拉伯语", "Arabic"),
+    ("俄语", "Russian"),
+    ("西班牙语", "Spanish"),
+    ("法语", "French"),
+    ("葡萄牙语", "Portuguese"),
+    ("德语", "German"),
+    ("土耳其语", "Turkish"),
+    ("荷兰语", "Dutch"),
+    ("乌克兰语", "Ukrainian"),
+    ("越南语", "Vietnamese"),
+    ("印尼语", "Indonesian"),
+    ("日语", "Japanese"),
+    ("意大利语", "Italian"),
+    ("韩语", "Korean"),
 
+]
 # 将声音选项添加到 minimaxVoiceCombo
 for cn, en in minimax_voices:
     if items["LangEnCheckBox"].Checked:
@@ -906,6 +957,13 @@ for cn, en in minimax_voices:
         items["minimaxVoiceCombo"].AddItem(cn)  # 未选中时添加中文
    
 
+# 将语言选项添加到 minimaxLanguageCombo
+for cn, en in minimax_language:
+    if items["LangEnCheckBox"].Checked:
+        items["minimaxLanguageCombo"].AddItem(en)  
+    else:
+        items["minimaxLanguageCombo"].AddItem(cn)  
+   
 # 定义情绪选项
 emotions = [
     ("默认", "Default"),
@@ -1003,18 +1061,18 @@ voices = {
                 }
             },
             {
-                "zh-CN-Xiaoxiao:DragonHDLatestNeural": {
+                "zh-CN-Xiaoxiao:DragonHDFlashLatestNeural": {
                     "Gender": "Female",
-                    "Name": "晓晓 HD",
+                    "Name": "晓晓 HD Flash",
                     "Styles": [
                         ""
                     ]
                 }
             },
             {
-                "zh-CN-Xiaoxiao:DragonHDv1Neural": {
+                "zh-CN-Xiaoxiao2:DragonHDFlashLatestNeural": {
                     "Gender": "Female",
-                    "Name": "晓晓 HD V1",
+                    "Name": "晓晓2 HD Flash",
                     "Styles": [
                         ""
                     ]
@@ -1114,9 +1172,9 @@ voices = {
                 }
             },
             {
-                "zh-CN-Xiaochen:DragonHDv1Neural": {
+                "zh-CN-Xiaochen:DragonHDFlashLatestNeural": {
                     "Gender": "Female",
-                    "Name": "晓辰 HD V1",
+                    "Name": "晓辰 HD Flash",
                     "Styles": [
                         ""
                     ]
@@ -1339,6 +1397,15 @@ voices = {
                 }
             },
             {
+                "zh-CN-Yunyi:DragonHDFlashLatestNeural": {
+                    "Gender": "Male",
+                    "Name": "云逸 HD Flash",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
                 "zh-CN-YunfanMultilingualNeural": {
                     "Gender": "Male",
                     "Name": "云凡 多语言",
@@ -1348,9 +1415,27 @@ voices = {
                 }
             },
             {
+                "zh-CN-Yunfan:DragonHDLatestNeural": {
+                    "Gender": "Male",
+                    "Name": "云凡 HD",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
                 "zh-CN-YunxiaoMultilingualNeural": {
                     "Gender": "Male",
                     "Name": "云霄 多语言",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "zh-CN-Yunxiao:DragonHDFlashLatestNeural": {
+                    "Gender": "Male",
+                    "Name": "云霄 HD Flash",
                     "Styles": [
                         ""
                     ]
@@ -1752,6 +1837,24 @@ voices = {
                 }
             },
             {
+                "en-GB-AdaMultilingualNeural": {
+                    "Gender": "Female",
+                    "Name": "Ada Multilingual",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-GB-OllieMultilingualNeural": {
+                    "Gender": "Male",
+                    "Name": "Ollie Multilingual",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
                 "en-GB-AbbiNeural": {
                     "Gender": "Female",
                     "Name": "Abbi",
@@ -1851,24 +1954,6 @@ voices = {
                 }
             },
             {
-                "en-GB-AdaMultilingualNeural": {
-                    "Gender": "Female",
-                    "Name": "Ada Multilingual",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-GB-OllieMultilingualNeural": {
-                    "Gender": "Male",
-                    "Name": "Ollie Multilingual",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
                 "en-GB-MiaNeural": {
                     "Gender": "Female",
                     "Name": "Mia",
@@ -1941,6 +2026,24 @@ voices = {
                 "en-IN-AashiNeural": {
                     "Gender": "Female",
                     "Name": "Aashi",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-IN-AartiNeural": {
+                    "Gender": "Female",
+                    "Name": "Aarti",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-IN-ArjunNeural": {
+                    "Gender": "Male",
+                    "Name": "Arjun",
                     "Styles": [
                         ""
                     ]
@@ -2146,102 +2249,9 @@ voices = {
         "language": "English (United States)",
         "voices": [
             {
-                "en-US-AriaNeural": {
-                    "Gender": "Female",
-                    "Name": "Aria",
-                    "Styles": [
-                        "chat",
-                        "customerservice",
-                        "narration-professional",
-                        "newscast-casual",
-                        "newscast-formal",
-                        "cheerful",
-                        "empathetic",
-                        "angry",
-                        "sad",
-                        "excited",
-                        "friendly",
-                        "terrified",
-                        "shouting",
-                        "unfriendly",
-                        "whispering",
-                        "hopeful"
-                    ]
-                }
-            },
-            {
-                "en-US-Aria:DragonHDLatestNeural": {
-                    "Gender": "Female",
-                    "Name": "Aria HD",
-                    "Styles": [
-                        "chat",
-                        "customerservice",
-                        "narration-professional",
-                        "newscast-casual",
-                        "newscast-formal",
-                        "cheerful",
-                        "empathetic",
-                        "angry",
-                        "sad",
-                        "excited",
-                        "friendly",
-                        "terrified",
-                        "shouting",
-                        "unfriendly",
-                        "whispering",
-                        "hopeful"
-                    ]
-                }
-            },
-            {
-                "en-US-Aria:DragonHDv1Neural": {
-                    "Gender": "Female",
-                    "Name": "Aria HD V1",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-AvaNeural": {
-                    "Gender": "Female",
-                    "Name": "Ava",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
                 "en-US-AvaMultilingualNeural": {
                     "Gender": "Female",
                     "Name": "Ava Multilingual",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-Ava:DragonHDLatestNeural": {
-                    "Gender": "Female",
-                    "Name": "Ava HD",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-Ava:DragonHDv1Neural": {
-                    "Gender": "Female",
-                    "Name": "Ava HD V1",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-AndrewNeural": {
-                    "Gender": "Male",
-                    "Name": "Andrew",
                     "Styles": [
                         ""
                     ]
@@ -2258,90 +2268,9 @@ voices = {
                 }
             },
             {
-                "en-US-Andrew:DragonHDLatestNeural": {
-                    "Gender": "Male",
-                    "Name": "Andrew HD",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-Andrew:DragonHDv1Neural": {
-                    "Gender": "Male",
-                    "Name": "Andrew HD V1",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-Andrew2:DragonHDLatestNeural": {
-                    "Gender": "Male",
-                    "Name": "Andrew2 HD",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-Andrew2:DragonHDv1Neural": {
-                    "Gender": "Male",
-                    "Name": "Andrew2 HD V1",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-AmberNeural": {
+                "en-US-EmmaMultilingualNeural": {
                     "Gender": "Female",
-                    "Name": "Amber",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-AnaNeural": {
-                    "Gender": "Female",
-                    "Name": "Ana",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-AshleyNeural": {
-                    "Gender": "Female",
-                    "Name": "Ashley",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-AdamMultilingualNeural": {
-                    "Gender": "Male",
-                    "Name": "Adam Multilingual",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-AIGenerate1Neural": {
-                    "Gender": "Male",
-                    "Name": "AIGenerate1",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-AIGenerate2Neural": {
-                    "Gender": "Female",
-                    "Name": "AIGenerate2",
+                    "Name": "Emma Multilingual",
                     "Styles": [
                         ""
                     ]
@@ -2350,25 +2279,52 @@ voices = {
             {
                 "en-US-AlloyTurboMultilingualNeural": {
                     "Gender": "Male",
-                    "Name": "AlloyTurboMultilingual",
+                    "Name": "Alloy Turbo Multilingual",
                     "Styles": [
                         ""
                     ]
                 }
             },
             {
-                "en-US-AmandaMultilingualNeural": {
-                    "Gender": "Female",
-                    "Name": "Amanda Multilingual",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-BrianNeural": {
+                "en-US-EchoTurboMultilingualNeural": {
                     "Gender": "Male",
-                    "Name": "Brian",
+                    "Name": "Echo Turbo Multilingual",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-FableTurboMultilingualNeural": {
+                    "Gender": "Male",
+                    "Name": "Fable Turbo Multilingual",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-OnyxTurboMultilingualNeural": {
+                    "Gender": "Male",
+                    "Name": "Onyx Turbo Multilingual",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-NovaTurboMultilingualNeural": {
+                    "Gender": "Female",
+                    "Name": "Nova Turbo Multilingual",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-ShimmerTurboMultilingualNeural": {
+                    "Gender": "Female",
+                    "Name": "Shimmer Turbo Multilingual",
                     "Styles": [
                         ""
                     ]
@@ -2384,145 +2340,18 @@ voices = {
                 }
             },
             {
-                "en-US-Brian:DragonHDLatestNeural": {
-                    "Gender": "Male",
-                    "Name": "Brian HD",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-Brian:DragonHDv1Neural": {
-                    "Gender": "Male",
-                    "Name": "Brian HD V1",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-BrandonNeural": {
-                    "Gender": "Male",
-                    "Name": "Brandon",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-BlueNeural": {
-                    "Gender": "Male",
-                    "Name": "Blue",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-BrandonMultilingualNeural": {
-                    "Gender": "Male",
-                    "Name": "Brandon Multilingual",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-ChristopherNeural": {
-                    "Gender": "Male",
-                    "Name": "Christopher",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-CoraNeural": {
+                "en-US-AvaNeural": {
                     "Gender": "Female",
-                    "Name": "Cora",
+                    "Name": "Ava",
                     "Styles": [
                         ""
                     ]
                 }
             },
             {
-                "en-US-CoraMultilingualNeural": {
-                    "Gender": "Female",
-                    "Name": "Cora Multilingual",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-ChristopherMultilingualNeural": {
+                "en-US-AndrewNeural": {
                     "Gender": "Male",
-                    "Name": "Christopher Multilingual",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-DavisNeural": {
-                    "Gender": "Male",
-                    "Name": "Davis",
-                    "Styles": [
-                        "chat",
-                        "angry",
-                        "cheerful",
-                        "excited",
-                        "friendly",
-                        "hopeful",
-                        "sad",
-                        "shouting",
-                        "terrified",
-                        "unfriendly",
-                        "whispering"
-                    ]
-                }
-            },
-            {
-                "en-US-DavisMultilingualNeural": {
-                    "Gender": "Male",
-                    "Name": "Davis Multilingual",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-Davis:DragonHDLatestNeural": {
-                    "Gender": "Male",
-                    "Name": "Davis HD",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-Davis:DragonHDv1Neural": {
-                    "Gender": "Male",
-                    "Name": "Davis HD V1",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-DerekMultilingualNeural": {
-                    "Gender": "Male",
-                    "Name": "Derek Multilingual",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-DustinMultilingualNeural": {
-                    "Gender": "Male",
-                    "Name": "Dustin Multilingual",
+                    "Name": "Andrew",
                     "Styles": [
                         ""
                     ]
@@ -2538,93 +2367,11 @@ voices = {
                 }
             },
             {
-                "en-US-EmmaMultilingualNeural": {
-                    "Gender": "Female",
-                    "Name": "Emma Multilingual",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-Emma:DragonHDLatestNeural": {
-                    "Gender": "Female",
-                    "Name": "Emma HD",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-Emma:DragonHDv1Neural": {
-                    "Gender": "Female",
-                    "Name": "Emma HD V1",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-Emma2:DragonHDLatestNeural": {
-                    "Gender": "Female",
-                    "Name": "Emma2 HD",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-Emma2:DragonHDv1Neural": {
-                    "Gender": "Female",
-                    "Name": "Emma2 HD V1",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-ElizabethNeural": {
-                    "Gender": "Female",
-                    "Name": "Elizabeth",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-EricNeural": {
+                "en-US-BrianNeural": {
                     "Gender": "Male",
-                    "Name": "Eric",
+                    "Name": "Brian",
                     "Styles": [
                         ""
-                    ]
-                }
-            },
-            {
-                "en-US-EvelynMultilingualNeural": {
-                    "Gender": "Female",
-                    "Name": "Evelyn Multilingual",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-GuyNeural": {
-                    "Gender": "Male",
-                    "Name": "Guy",
-                    "Styles": [
-                        "newscast",
-                        "angry",
-                        "cheerful",
-                        "sad",
-                        "excited",
-                        "friendly",
-                        "terrified",
-                        "shouting",
-                        "unfriendly",
-                        "whispering",
-                        "hopeful"
                     ]
                 }
             },
@@ -2651,22 +2398,10 @@ voices = {
                 }
             },
             {
-                "en-US-JennyMultilingualNeural": {
-                    "Gender": "Female",
-                    "Name": "Jenny Multilingual",
+                "en-US-GuyNeural": {
+                    "Gender": "Male",
+                    "Name": "Guy",
                     "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-Jenny:DragonHDLatestNeural": {
-                    "Gender": "Female",
-                    "Name": "Jenny HD",
-                    "Styles": [
-                        "assistant",
-                        "chat",
-                        "customerservice",
                         "newscast",
                         "angry",
                         "cheerful",
@@ -2677,17 +2412,50 @@ voices = {
                         "shouting",
                         "unfriendly",
                         "whispering",
-                        "hopeful",
-                        
+                        "hopeful"
                     ]
                 }
             },
             {
-                "en-US-Jenny:DragonHDv1Neural": {
+                "en-US-AriaNeural": {
                     "Gender": "Female",
-                    "Name": "Jenny HD V1",
+                    "Name": "Aria",
                     "Styles": [
-                        ""
+                        "chat",
+                        "customerservice",
+                        "narration-professional",
+                        "newscast-casual",
+                        "newscast-formal",
+                        "cheerful",
+                        "empathetic",
+                        "angry",
+                        "sad",
+                        "excited",
+                        "friendly",
+                        "terrified",
+                        "shouting",
+                        "unfriendly",
+                        "whispering",
+                        "hopeful"
+                    ]
+                }
+            },
+            {
+                "en-US-DavisNeural": {
+                    "Gender": "Male",
+                    "Name": "Davis",
+                    "Styles": [
+                        "chat",
+                        "angry",
+                        "cheerful",
+                        "excited",
+                        "friendly",
+                        "hopeful",
+                        "sad",
+                        "shouting",
+                        "terrified",
+                        "unfriendly",
+                        "whispering"
                     ]
                 }
             },
@@ -2728,38 +2496,11 @@ voices = {
                 }
             },
             {
-                "en-US-JacobNeural": {
-                    "Gender": "Male",
-                    "Name": "Jacob",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
                 "en-US-KaiNeural": {
                     "Gender": "Male",
                     "Name": "Kai",
                     "Styles": [
                         "conversation"
-                    ]
-                }
-            },
-            {
-                "en-US-LewisMultilingualNeural": {
-                    "Gender": "Male",
-                    "Name": "Lewis Multilingual",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "en-US-LolaMultilingualNeural": {
-                    "Gender": "Female",
-                    "Name": "Lola Multilingual",
-                    "Styles": [
-                        ""
                     ]
                 }
             },
@@ -2773,20 +2514,38 @@ voices = {
                 }
             },
             {
-                "en-US-MichelleNeural": {
+                "en-US-SaraNeural": {
                     "Gender": "Female",
-                    "Name": "Michelle",
+                    "Name": "Sara",
                     "Styles": [
-                        ""
+                        "angry",
+                        "cheerful",
+                        "excited",
+                        "friendly",
+                        "hopeful",
+                        "sad",
+                        "shouting",
+                        "terrified",
+                        "unfriendly",
+                        "whispering"
                     ]
                 }
             },
             {
-                "en-US-MonicaNeural": {
-                    "Gender": "Female",
-                    "Name": "Monica",
+                "en-US-TonyNeural": {
+                    "Gender": "Male",
+                    "Name": "Tony",
                     "Styles": [
-                        ""
+                        "angry",
+                        "cheerful",
+                        "excited",
+                        "friendly",
+                        "hopeful",
+                        "sad",
+                        "shouting",
+                        "terrified",
+                        "unfriendly",
+                        "whispering"
                     ]
                 }
             },
@@ -2809,27 +2568,135 @@ voices = {
                 }
             },
             {
-                "en-US-NancyMultilingualNeural": {
+                "en-US-CoraMultilingualNeural": {
                     "Gender": "Female",
-                    "Name": "Nancy Multilingual",
+                    "Name": "Cora Multilingual",
                     "Styles": [
                         ""
                     ]
                 }
             },
             {
-                "en-US-NovaTurboMultilingualNeural": {
-                    "Gender": "Female",
-                    "Name": "NovaTurboMultilingual",
+                "en-US-ChristopherMultilingualNeural": {
+                    "Gender": "Male",
+                    "Name": "Christopher Multilingual",
                     "Styles": [
                         ""
                     ]
                 }
             },
             {
-                "en-US-PhoebeMultilingualNeural": {
+                "en-US-BrandonMultilingualNeural": {
+                    "Gender": "Male",
+                    "Name": "Brandon Multilingual",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-AmberNeural": {
                     "Gender": "Female",
-                    "Name": "Phoebe Multilingual",
+                    "Name": "Amber",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-AnaNeural": {
+                    "Gender": "Female",
+                    "Name": "Ana",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-AshleyNeural": {
+                    "Gender": "Female",
+                    "Name": "Ashley",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-BrandonNeural": {
+                    "Gender": "Male",
+                    "Name": "Brandon",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-ChristopherNeural": {
+                    "Gender": "Male",
+                    "Name": "Christopher",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-CoraNeural": {
+                    "Gender": "Female",
+                    "Name": "Cora",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-ElizabethNeural": {
+                    "Gender": "Female",
+                    "Name": "Elizabeth",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-EricNeural": {
+                    "Gender": "Male",
+                    "Name": "Eric",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-JacobNeural": {
+                    "Gender": "Male",
+                    "Name": "Jacob",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-JennyMultilingualNeural": {
+                    "Gender": "Female",
+                    "Name": "Jenny Multilingual",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-MichelleNeural": {
+                    "Gender": "Female",
+                    "Name": "Michelle",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-MonicaNeural": {
+                    "Gender": "Female",
+                    "Name": "Monica",
                     "Styles": [
                         ""
                     ]
@@ -2854,24 +2721,6 @@ voices = {
                 }
             },
             {
-                "en-US-SaraNeural": {
-                    "Gender": "Female",
-                    "Name": "Sara",
-                    "Styles": [
-                        "angry",
-                        "cheerful",
-                        "excited",
-                        "friendly",
-                        "hopeful",
-                        "sad",
-                        "shouting",
-                        "terrified",
-                        "unfriendly",
-                        "whispering"
-                    ]
-                }
-            },
-            {
                 "en-US-SteffanNeural": {
                     "Gender": "Male",
                     "Name": "Steffan",
@@ -2881,33 +2730,133 @@ voices = {
                 }
             },
             {
-                "en-US-SteffanMultilingualNeural": {
+                "en-US-AdamMultilingualNeural": {
                     "Gender": "Male",
-                    "Name": "Steffan Multilingual",
+                    "Name": "Adam Multilingual",
                     "Styles": [
                         ""
                     ]
                 }
             },
             {
-                "en-US-Steffan:DragonHDLatestNeural": {
+                "en-US-AIGenerate1Neural": {
                     "Gender": "Male",
-                    "Name": "Steffan HD",
+                    "Name": "AIGenerate1",
                     "Styles": [
                         ""
                     ]
                 }
             },
             {
-                "en-US-Steffan:DragonHDv1Neural": {
-                    "Gender": "Male",
-                    "Name": "Steffan HD V1",
+                "en-US-AIGenerate2Neural": {
+                    "Gender": "Female",
+                    "Name": "AIGenerate2",
                     "Styles": [
                         ""
                     ]
                 }
-            },            
-            
+            },
+            {
+                "en-US-AmandaMultilingualNeural": {
+                    "Gender": "Female",
+                    "Name": "Amanda Multilingual",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-BlueNeural": {
+                    "Gender": "Male",
+                    "Name": "Blue",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-DavisMultilingualNeural": {
+                    "Gender": "Male",
+                    "Name": "Davis Multilingual",
+                    "Styles": [
+                        "empathetic",
+                        "funny",
+                        "relieved"
+                    ]
+                }
+            },
+            {
+                "en-US-DerekMultilingualNeural": {
+                    "Gender": "Male",
+                    "Name": "Derek Multilingual",
+                    "Styles": [
+                        "empathetic",
+                        "excited",
+                        "relieved",
+                        "shy"
+                    ]
+                }
+            },
+            {
+                "en-US-DustinMultilingualNeural": {
+                    "Gender": "Male",
+                    "Name": "Dustin Multilingual",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-EvelynMultilingualNeural": {
+                    "Gender": "Female",
+                    "Name": "Evelyn Multilingual",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-LewisMultilingualNeural": {
+                    "Gender": "Male",
+                    "Name": "Lewis Multilingual",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-LolaMultilingualNeural": {
+                    "Gender": "Female",
+                    "Name": "Lola Multilingual",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-NancyMultilingualNeural": {
+                    "Gender": "Female",
+                    "Name": "Nancy Multilingual",
+                    "Styles": [
+                        "excited",
+                        "friendly",
+                        "funny",
+                        "relieved",
+                        "shy"
+                    ]
+                }
+            },
+            {
+                "en-US-PhoebeMultilingualNeural": {
+                    "Gender": "Female",
+                    "Name": "Phoebe Multilingual",
+                    "Styles": [
+                        "empathetic",
+                        "sad",
+                        "serious"
+                    ]
+                }
+            },
             {
                 "en-US-SamuelMultilingualNeural": {
                     "Gender": "Male",
@@ -2931,26 +2880,201 @@ voices = {
                         "sad"
                     ]
                 }
-            },   
+            },
             {
-                "en-US-TonyNeural": {
+                "en-US-SteffanMultilingualNeural": {
                     "Gender": "Male",
-                    "Name": "Tony",
+                    "Name": "Steffan Multilingual",
                     "Styles": [
-                        "angry",
-                        "cheerful",
-                        "excited",
-                        "friendly",
-                        "hopeful",
-                        "sad",
-                        "shouting",
-                        "terrified",
-                        "unfriendly",
-                        "whispering"
+                        ""
                     ]
                 }
             },
-                     
+            {
+                "en-US-Adam:DragonHDLatestNeural": {
+                    "Gender": "Male",
+                    "Name": "Adam Dragon HD Latest",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-Alloy:DragonHDLatestNeural": {
+                    "Gender": "Male",
+                    "Name": "Alloy Dragon HD Latest",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-Andrew:DragonHDLatestNeural": {
+                    "Gender": "Male",
+                    "Name": "Andrew Dragon HD Latest",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-Andrew2:DragonHDLatestNeural": {
+                    "Gender": "Male",
+                    "Name": "Andrew2 Dragon HD Latest",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-Andrew3:DragonHDLatestNeural": {
+                    "Gender": "Male",
+                    "Name": "Andrew3 Dragon HD Latest",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-Aria:DragonHDLatestNeural": {
+                    "Gender": "Female",
+                    "Name": "Aria Dragon HD Latest",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-Ava:DragonHDLatestNeural": {
+                    "Gender": "Female",
+                    "Name": "Ava Dragon HD Latest",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-Ava3:DragonHDLatestNeural": {
+                    "Gender": "Female",
+                    "Name": "Ava3 Dragon HD Latest",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-Brian:DragonHDLatestNeural": {
+                    "Gender": "Male",
+                    "Name": "Brian Dragon HD Latest",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-Davis:DragonHDLatestNeural": {
+                    "Gender": "Male",
+                    "Name": "Davis Dragon HD Latest",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-Emma:DragonHDLatestNeural": {
+                    "Gender": "Female",
+                    "Name": "Emma Dragon HD Latest",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-Emma2:DragonHDLatestNeural": {
+                    "Gender": "Female",
+                    "Name": "Emma2 Dragon HD Latest",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-Jenny:DragonHDLatestNeural": {
+                    "Gender": "Female",
+                    "Name": "Jenny Dragon HD Latest",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-MultiTalker-Ava-Andrew:DragonHDLatestNeural": {
+                    "Gender": "Male",
+                    "Name": "MultiTalker Dragon HD Latest",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-Nova:DragonHDLatestNeural": {
+                    "Gender": "Female",
+                    "Name": "Nova Dragon HD Latest",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-Phoebe:DragonHDLatestNeural": {
+                    "Gender": "Female",
+                    "Name": "Phoebe Dragon HD Latest",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-Serena:DragonHDLatestNeural": {
+                    "Gender": "Female",
+                    "Name": "Serena Dragon HD Latest",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-US-Steffan:DragonHDLatestNeural": {
+                    "Gender": "Male",
+                    "Name": "Steffan Dragon HD Latest",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            }
+        ]
+    },
+    "en-ZA": {
+        "language": "English (South Africa)",
+        "voices": [
+            {
+                "en-ZA-LeahNeural": {
+                    "Gender": "Female",
+                    "Name": "Leah",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "en-ZA-LukeNeural": {
+                    "Gender": "Male",
+                    "Name": "Luke",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            }
         ]
     },
     "es-AR": {
@@ -3160,6 +3284,42 @@ voices = {
                 }
             },
             {
+                "es-ES-ArabellaMultilingualNeural": {
+                    "Gender": "Female",
+                    "Name": "Arabella Multilingual",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "es-ES-IsidoraMultilingualNeural": {
+                    "Gender": "Female",
+                    "Name": "Isidora Multilingual",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "es-ES-TristanMultilingualNeural": {
+                    "Gender": "Male",
+                    "Name": "Tristan Multilingual",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "es-ES-XimenaMultilingualNeural": {
+                    "Gender": "Female",
+                    "Name": "Ximena Multilingual",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
                 "es-ES-AbrilNeural": {
                     "Gender": "Female",
                     "Name": "Abril",
@@ -3286,36 +3446,18 @@ voices = {
                 }
             },
             {
-                "es-ES-ArabellaMultilingualNeural": {
-                    "Gender": "Female",
-                    "Name": "Arabella Multilingual",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "es-ES-IsidoraMultilingualNeural": {
-                    "Gender": "Female",
-                    "Name": "Isidora Multilingual",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "es-ES-TristanMultilingualNeural": {
+                "es-ES-Tristan:DragonHDLatestNeural": {
                     "Gender": "Male",
-                    "Name": "Tristan Multilingual",
+                    "Name": "Tristan Dragon HD Latest",
                     "Styles": [
                         ""
                     ]
                 }
             },
             {
-                "es-ES-XimenaMultilingualNeural": {
+                "es-ES-Ximena:DragonHDLatestNeural": {
                     "Gender": "Female",
-                    "Name": "Ximena Multilingual",
+                    "Name": "Ximena Dragon HD Latest",
                     "Styles": [
                         ""
                     ]
@@ -3814,6 +3956,24 @@ voices = {
                 }
             },
             {
+                "de-DE-SeraphinaMultilingualNeural": {
+                    "Gender": "Female",
+                    "Name": "Seraphina Mehrsprachig",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "de-DE-FlorianMultilingualNeural": {
+                    "Gender": "Male",
+                    "Name": "Florian Mehrsprachig",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
                 "de-DE-AmalaNeural": {
                     "Gender": "Female",
                     "Name": "Amala",
@@ -3844,15 +4004,6 @@ voices = {
                 "de-DE-ElkeNeural": {
                     "Gender": "Female",
                     "Name": "Elke",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "de-DE-FlorianMultilingualNeural": {
-                    "Gender": "Male",
-                    "Name": "Florian Mehrsprachig",
                     "Styles": [
                         ""
                     ]
@@ -3931,24 +4082,6 @@ voices = {
                 }
             },
             {
-                "de-DE-Seraphina:DragonHDLatestNeural": {
-                    "Gender": "Female",
-                    "Name": "Seraphina HD",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "de-DE-SeraphinaMultilingualNeural": {
-                    "Gender": "Female",
-                    "Name": "Seraphina Mehrsprachig",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
                 "de-DE-TanjaNeural": {
                     "Gender": "Female",
                     "Name": "Tanja",
@@ -3958,18 +4091,18 @@ voices = {
                 }
             },
             {
-                "de-DE-Seraphina:DragonHDLatestNeural": {
-                    "Gender": "Female",
-                    "Name": "Seraphina HD",
+                "de-DE-Florian:DragonHDLatestNeural": {
+                    "Gender": "Male",
+                    "Name": "Florian Dragon HD Latest",
                     "Styles": [
                         ""
                     ]
                 }
             },
             {
-                "de-DE-Seraphina:DragonHDv1Neural": {
+                "de-DE-Seraphina:DragonHDLatestNeural": {
                     "Gender": "Female",
-                    "Name": "Seraphina HD V1",
+                    "Name": "Seraphina Dragon HD Latest",
                     "Styles": [
                         ""
                     ]
@@ -4092,6 +4225,33 @@ voices = {
                 }
             },
             {
+                "fr-FR-VivienneMultilingualNeural": {
+                    "Gender": "Female",
+                    "Name": "Vivienne Multilingue",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "fr-FR-RemyMultilingualNeural": {
+                    "Gender": "Male",
+                    "Name": "Rémy Multilingue",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "fr-FR-LucienMultilingualNeural": {
+                    "Gender": "Male",
+                    "Name": "Lucien Multilingual",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
                 "fr-FR-AlainNeural": {
                     "Gender": "Male",
                     "Name": "Alain",
@@ -4182,24 +4342,6 @@ voices = {
                 }
             },
             {
-                "fr-FR-RemyMultilingualNeural": {
-                    "Gender": "Male",
-                    "Name": "Rémy Multilingue",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "fr-FR-VivienneMultilingualNeural": {
-                    "Gender": "Female",
-                    "Name": "Vivienne Multilingue",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
                 "fr-FR-YvesNeural": {
                     "Gender": "Male",
                     "Name": "Yves",
@@ -4218,9 +4360,18 @@ voices = {
                 }
             },
             {
-                "fr-FR-LucienMultilingualNeural": {
+                "fr-FR-Remy:DragonHDLatestNeural": {
                     "Gender": "Male",
-                    "Name": "Lucien Multilingual",
+                    "Name": "Remy Dragon HD Latest",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "fr-FR-Vivienne:DragonHDLatestNeural": {
+                    "Gender": "Female",
+                    "Name": "Vivienne Dragon HD Latest",
                     "Styles": [
                         ""
                     ]
@@ -4293,6 +4444,42 @@ voices = {
                         "cheerful",
                         "sad",
                         "excited"
+                    ]
+                }
+            },
+            {
+                "it-IT-AlessioMultilingualNeural": {
+                    "Gender": "Male",
+                    "Name": "Alessio Multilingual",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "it-IT-IsabellaMultilingualNeural": {
+                    "Gender": "Female",
+                    "Name": "Isabella Multilingual",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "it-IT-GiuseppeMultilingualNeural": {
+                    "Gender": "Male",
+                    "Name": "Giuseppe Multilingual",
+                    "Styles": [
+                        ""
+                    ]
+                }
+            },
+            {
+                "it-IT-MarcelloMultilingualNeural": {
+                    "Gender": "Male",
+                    "Name": "Marcello Multilingual",
+                    "Styles": [
+                        ""
                     ]
                 }
             },
@@ -4412,42 +4599,6 @@ voices = {
                         ""
                     ]
                 }
-            },
-            {
-                "it-IT-AlessioMultilingualNeural": {
-                    "Gender": "Male",
-                    "Name": "Alessio Multilingual",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "it-IT-GiuseppeMultilingualNeural": {
-                    "Gender": "Male",
-                    "Name": "Giuseppe Multilingual",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "it-IT-IsabellaMultilingualNeural": {
-                    "Gender": "Female",
-                    "Name": "Isabella Multilingual",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "it-IT-MarcelloMultilingualNeural": {
-                    "Gender": "Male",
-                    "Name": "Marcello Multilingual",
-                    "Styles": [
-                        ""
-                    ]
-                }
             }
         ]
     },
@@ -4531,16 +4682,16 @@ voices = {
             {
                 "ja-JP-Masaru:DragonHDLatestNeural": {
                     "Gender": "Male",
-                    "Name": "勝 HD",
+                    "Name": "Masaru Dragon HD Latest",
                     "Styles": [
                         ""
                     ]
                 }
             },
             {
-                "ja-JP-Masaru:DragonHDv1Neural": {
-                    "Gender": "Male",
-                    "Name": "勝 HD V1",
+                "ja-JP-Nanami:DragonHDLatestNeural": {
+                    "Gender": "Female",
+                    "Name": "Nanami Dragon HD Latest",
                     "Styles": [
                         ""
                     ]
@@ -4566,6 +4717,15 @@ voices = {
                     "Name": "인준",
                     "Styles": [
                         "sad"
+                    ]
+                }
+            },
+            {
+                "ko-KR-HyunsuMultilingualNeural": {
+                    "Gender": "Male",
+                    "Name": "Hyunsu Multilingual",
+                    "Styles": [
+                        ""
                     ]
                 }
             },
@@ -4627,15 +4787,6 @@ voices = {
                 "ko-KR-YuJinNeural": {
                     "Gender": "Female",
                     "Name": "유진",
-                    "Styles": [
-                        ""
-                    ]
-                }
-            },
-            {
-                "ko-KR-HyunsuMultilingualNeural": {
-                    "Gender": "Male",
-                    "Name": "Hyunsu Multilingual",
                     "Styles": [
                         ""
                     ]
@@ -5730,6 +5881,12 @@ def get_original_style(chinese_style):
             return eng
     return chinese_style
 
+for cn, en in NameTypeMapping.items():
+    if items["LangEnCheckBox"].Checked:
+        items["NameTypeCombo"].AddItem(en)  # 选中时添加英文
+    else:
+        items["NameTypeCombo"].AddItem(cn)  # 未选中时添加中文
+
 Multilinguals = {
     "Multilingual1": {
         "names": [
@@ -5877,6 +6034,7 @@ def switch_language(lang):
     """
     items["NameTypeCombo"].Clear()
     items["minimaxVoiceCombo"].Clear()
+    items["minimaxLanguageCombo"].Clear()
     items["minimaxEmotionCombo"].Clear()
 
     if "MyTabs" in items:
@@ -5912,7 +6070,12 @@ def switch_language(lang):
         if items["LangEnCheckBox"].Checked:
             items["minimaxVoiceCombo"].AddItem(en)  # 选中时添加英文
         else:
-            items["minimaxVoiceCombo"].AddItem(cn)  # 未选中时添加中文       
+            items["minimaxVoiceCombo"].AddItem(cn)  # 未选中时添加中文    
+    for cn, en in minimax_language:
+        if items["LangEnCheckBox"].Checked:
+            items["minimaxLanguageCombo"].AddItem(en)  
+        else:
+            items["minimaxLanguageCombo"].AddItem(cn)     
 
 def on_cn_checkbox_clicked(ev):
     items["LangEnCheckBox"].Checked = not items["LangCnCheckBox"].Checked
@@ -5959,11 +6122,6 @@ else:
     switch_language("cn")
 
 
-for cn, en in NameTypeMapping.items():
-    if items["LangEnCheckBox"].Checked:
-        items["NameTypeCombo"].AddItem(en)  # 选中时添加英文
-    else:
-        items["NameTypeCombo"].AddItem(cn)  # 未选中时添加中文
 
 def get_english_name_type(chinese_name_type):
     return NameTypeMapping.get(chinese_name_type, chinese_name_type)
@@ -6014,6 +6172,8 @@ if saved_settings:
     items["Path"].Text = saved_settings.get("Path", default_settings["Path"])
     items["minimaxModelCombo"].CurrentIndex = saved_settings.get("minimax_Model", default_settings["minimax_Model"])
     items["minimaxVoiceCombo"].CurrentIndex= saved_settings.get("minimax_Voice", default_settings["minimax_Voice"])
+    items["minimaxLanguageCombo"].CurrentIndex= saved_settings.get("minimax_Language", default_settings["minimax_Language"])
+    items["minimaxSubtitleCheckBox"].Checked = saved_settings.get("minimax_SubtitleCheckBox", default_settings["minimax_SubtitleCheckBox"])
     items["minimaxEmotionCombo"].CurrentIndex = saved_settings.get("minimax_Emotion", default_settings["minimax_Emotion"])
     items["minimaxRateSpinBox"].Value = saved_settings.get("minimax_Rate", default_settings["minimax_Rate"])
     items["minimaxVolumeSpinBox"].Value = saved_settings.get("minimax_Volume", default_settings["minimax_Volume"])
@@ -6556,14 +6716,14 @@ def on_fromsub_button_clicked(ev):
         show_warning_message(STATUS_MESSAGES.create_timeline)
         return
     if items["Path"].Text == '':
-        show_warning_message(STATUS_MESSAGES.enter_api_key)
+        show_warning_message(STATUS_MESSAGES.select_save_path)
         return
     global subtitle,stream,flag
     subtitle,start_frame, end_frame = get_current_subtitle(current_timeline)
     items['AzureTxt'].PlainText = subtitle
     extension = ".mp3" if azure_items["UnuseAPICheckBox"].Checked else items["OutputFormatCombo"].CurrentText.split(", ")[1]
     filename = generate_filename(items["Path"].Text, subtitle, extension)
-    print(filename)
+    #print(filename)
     voice_name = return_voice_name(items["NameCombo"].CurrentText)
     rate = items["RateSpinBox"].Value
     pitch = items["PitchSpinBox"].Value
@@ -6617,7 +6777,7 @@ def on_fromtxt_button_clicked(ev):
     subtitle = items["AzureTxt"].PlainText
     extension = ".mp3" if azure_items["UnuseAPICheckBox"].Checked else items["OutputFormatCombo"].CurrentText.split(", ")[1]
     filename = generate_filename(items["Path"].Text, subtitle, extension)
-    print(filename)
+    #print(filename)
     voice_name = return_voice_name(items["NameCombo"].CurrentText)
     rate = items["RateSpinBox"].Value
     pitch = items["PitchSpinBox"].Value
@@ -6811,13 +6971,16 @@ def process_minimax_request(text_func, timeline_func):
     # 获取 voice_id 和 emotion
     voice_name = items["minimaxVoiceCombo"].CurrentText
     voice_id = next((en for cn, en in minimax_voices if voice_name in (cn, en)), "")
+    lang_name = items["minimaxLanguageCombo"].CurrentText
+    lang_id = next((en for cn, en in minimax_language if lang_name in (cn, en)), "")
     emotion_name = items["minimaxEmotionCombo"].CurrentText
     emotion_value = next((en for cn, en in emotions if emotion_name in (cn, en)), "")
-
+    
     # 其他参数
     speed = items["minimaxRateSpinBox"].Value
     vol = items["minimaxVolumeSpinBox"].Value
     pitch = items["minimaxPitchSpinBox"].Value
+    subtitle_enable = items["minimaxSubtitleCheckBox"].Checked
     sample_rate = 32000
     bitrate = 128000
     channel = 2
@@ -6828,6 +6991,8 @@ def process_minimax_request(text_func, timeline_func):
         "model": model,
         "text": text,
         "stream": False,
+        "subtitle_enable":subtitle_enable,
+        "language_boost":lang_id,
         "voice_setting": {
             "voice_id": voice_id,
             "speed": speed,
@@ -6857,38 +7022,60 @@ def process_minimax_request(text_func, timeline_func):
     print(payload)
     update_status(STATUS_MESSAGES.synthesizing)
 
-    # 发送 POST 请求
     try:
         response = requests.post(url, headers=headers, data=payload_json)
-        print("响应状态码:", response.status_code)
+        #print("响应状态码:", response.status_code)
 
         response.raise_for_status()
         parsed_json = response.json()
-
-        # 检查 'data' 字段
-        if "data" in parsed_json:
-            audio_data = bytes.fromhex(parsed_json['data']['audio'])
+    
+        data = parsed_json.get("data")
+        if not data:
+            update_status(STATUS_MESSAGES.synthesis_failed)
+            print("响应中未包含 'data' 字段:", parsed_json)
+        else:
+            # 处理音频数据
+            audio_data = bytes.fromhex(data.get("audio", ""))
             filename = generate_filename(items["Path"].Text, text, f".{file_format}")
             print(filename)
-
-            # 写入音频文件
+        
             with open(filename, 'wb') as f:
                 f.write(audio_data)
-            print(f"音频已保存到 {filename}")
-
-            # 确保文件写入成功后加载到媒体池和时间线
+            #print(f"音频已保存到 {filename}")
+        
             if os.path.exists(filename):
                 start_frame, end_frame = timeline_func()
                 add_to_media_pool_and_timeline(start_frame, end_frame, filename)
-                print(f"成功将文件添加到媒体池: {filename}")
+                #print(f"成功将文件添加到媒体池: {filename}")
             else:
                 update_status(STATUS_MESSAGES.audio_save_failed)
                 print("音频文件保存失败")
-        else:
-            update_status(STATUS_MESSAGES.synthesis_failed)
-            print("响应中未包含 'data' 字段:", parsed_json)
-            
+        
+            # 下载字幕文件及转换为 SRT
+            subtitle_url = data.get("subtitle_file")
+            if subtitle_url:
+                #print("字幕文件URL:", subtitle_url)
+                try:
+                    subtitle_response = requests.get(subtitle_url)
+                    subtitle_response.raise_for_status()  # 检查响应状态
+                
+                    subtitle_filename = os.path.splitext(filename)[0] + ".json"
+                    with open(subtitle_filename, 'wb') as f:
+                        f.write(subtitle_response.content)
+                    #print(f"字幕文件已保存到 {subtitle_filename}")
 
+                    # 读取 JSON 并转换为 SRT 格式
+                    with open(subtitle_filename, 'r', encoding='utf-8') as f:
+                        json_data = json.load(f)
+                    srt_filename = os.path.splitext(subtitle_filename)[0] + ".srt"
+                    json_to_srt(json_data, srt_filename)
+                    # 成功生成 SRT 后，删除 JSON 文件
+                    os.remove(subtitle_filename)
+                except Exception as e:
+                    print(f"字幕处理出错: {e}")
+            else:
+             print("响应中未包含 'subtitle_file' 字段")
+            
     except requests.exceptions.RequestException as e:
         print(f"请求失败: {e}")
         update_status(STATUS_MESSAGES.synthesis_failed)
@@ -6899,6 +7086,33 @@ def process_minimax_request(text_func, timeline_func):
         update_status(STATUS_MESSAGES.synthesis_failed)
         print(f"响应中缺少关键字段: {e}")
 
+
+
+def json_to_srt(json_data, srt_path):
+    """
+    将JSON格式的字幕信息转换为 .srt 文件并保存。
+    """
+    srt_output = []
+    subtitle_id = 1
+    frame_rate = float(current_timeline.GetSetting("timelineFrameRate"))
+    for item in json_data:
+        text = item["text"]
+        # 移除可能出现的 BOM
+        if text.startswith("\ufeff"):
+            text = text[1:]
+        start_time = frame_to_timecode(item["time_begin"] / 1000,1)
+        end_time = frame_to_timecode(item["time_end"] / 1000,1)
+        srt_output.append(f"{subtitle_id}")
+        srt_output.append(f"{start_time} --> {end_time}")
+        srt_output.append(text)
+        srt_output.append("")
+        subtitle_id += 1
+    try:
+        with open(srt_path, 'w', encoding='utf-8') as file:
+            file.write("\n".join(srt_output))
+        print(f"SRT 文件已保存：{srt_path}")
+    except Exception as e:
+        print(f"保存 SRT 文件失败: {e}")
 
 # 针对字幕的处理函数
 def on_minimax_fromsub_button_clicked(ev):
@@ -6911,6 +7125,7 @@ def on_minimax_fromsub_button_clicked(ev):
     if items["Path"].Text == '':
         show_warning_message(STATUS_MESSAGES.select_save_path)
         return
+    items["minimaxSubtitleCheckBox"].Checked = False
     process_minimax_request(
         text_func=lambda: get_current_subtitle(current_timeline)[0],
         timeline_func=lambda: get_current_subtitle(current_timeline)[1:]
@@ -7091,12 +7306,14 @@ def on_minimax_reset_button_clicked(ev):
     #items["Path"].Text = default_settings["Path"]
     items["minimaxModelCombo"].CurrentIndex = default_settings["minimax_Model"]
     items["minimaxVoiceCombo"].CurrentIndex = default_settings["minimax_Voice"]
+    items["minimaxLanguageCombo"].CurrentIndex = default_settings["minimax_Language"]
     items["minimaxEmotionCombo"].CurrentIndex = default_settings["minimax_Emotion"]
     items["minimaxRateSpinBox"].Value = default_settings["minimax_Rate"]
     items["minimaxVolumeSpinBox"].Value = default_settings["minimax_Volume"]
     items["minimaxPitchSpinBox"].Value = default_settings["minimax_Pitch"]
     items["minimaxFormatCombo"].SetCurrentText(default_settings["minimax_Format"])
     items["minimaxBreakSpinBox"].Value = default_settings["minimax_Break"]
+    items["minimaxSubtitleCheckBox"].Checked = default_settings["minimax_SubtitleCheckBox"]
 
 # 绑定重置按钮事件
 win.On.minimaxResetButton.Clicked = on_minimax_reset_button_clicked
@@ -7140,6 +7357,8 @@ def close_and_save(settings_file):
         "minimax_Model": items["minimaxModelCombo"].CurrentIndex,
         #"Text": items["minimaxText"].PlainText,
         "minimax_Voice": items["minimaxVoiceCombo"].CurrentIndex,
+        "minimax_Language": items["minimaxLanguageCombo"].CurrentIndex,
+        "minimax_SubtitleCheckBox":items["minimaxSubtitleCheckBox"].Checked,
         "minimax_Emotion": items["minimaxEmotionCombo"].CurrentIndex,
         "minimax_Rate": items["minimaxRateSpinBox"].Value,
         "minimax_Volume": items["minimaxVolumeSpinBox"].Value,
