@@ -35,6 +35,9 @@ infomsg_cn = """
     </style>
 </head>
 <body>
+    <h3>更新[2.9] 2025-03-23</h3>
+        <li>-新增OpenAI TTS语音模型</li>
+
     <h3>更新[2.8] 2025-03-16</h3>
     
         <li>-微软语音</li>
@@ -151,6 +154,8 @@ infomsg_en = """
     </style>
 </head>
 <body>
+<h3>Update [2.9] 2025-03-23</h3>
+     <li>-Added OpenAI TTS voice model</li>
     <h3>Update [2.8] 2025-03-16</h3>
         <li>-Microsoft TTS</li>
         <ul>
@@ -226,6 +231,7 @@ infomsg_en = """
 </body>
 </html>
 """
+
 import platform
 from xml.dom import minidom
 import xml.etree.ElementTree as ET
@@ -324,9 +330,9 @@ def save_settings(settings, settings_file):
 saved_settings = load_settings(settings_file) 
 
 default_settings = {
+    "Path": "",
     "UNUSE_API":False,
     "API_KEY": '',
-    "OUTPUT_DIRECTORY": '',
     "REGION": '',
     "LANGUAGE": 0,
     "TYPE": 0,
@@ -342,9 +348,8 @@ default_settings = {
     "minimax_API_KEY": "",
     "minimax_GROUP_ID": "",
     "minimax_intlCheckBox":False,
-    "Path": "",
+
     "minimax_Model": 0,
-    #"Text": "",
     "minimax_Voice": 0,
     "minimax_Language": 0,
     "minimax_SubtitleCheckBox":False,
@@ -352,9 +357,17 @@ default_settings = {
     "minimax_Rate": 1.0,
     "minimax_Volume": 1.0,
     "minimax_Pitch": 0,
-    "minimax_Format": "mp3",
+    "minimax_Format": 0,
     "minimax_Break":50,
 
+    "OpenAI_API_KEY": "",
+    "OpenAI_BASE_URL": "",
+    "OpenAI_Model": 0,
+    "OpenAI_Voice": 0,
+    "OpenAI_Rate": 1.0,
+    "OpenAI_Format": 0,
+    "OpenAI_Instruction":"",
+    
     "CN":True,
     "EN":False,
 
@@ -455,7 +468,7 @@ x_center = (screen_width - window_width) // 2
 y_center = (screen_height - window_height) // 2
 win = dispatcher.AddWindow({
     "ID": "MainWin", 
-    "WindowTitle": "DaVinci TTS 2.8", 
+    "WindowTitle": "DaVinci TTS 2.9", 
     "Geometry": [x_center, y_center, window_width, window_height],
     "Spacing": 10,
     "StyleSheet": """
@@ -468,7 +481,7 @@ win = dispatcher.AddWindow({
         ui.VGroup([
             ui.TabBar({"Weight": 0.0, "ID": "MyTabs"}), 
             ui.Stack({"Weight": 1.0, "ID": "MyStack"}, [
-                ui.VGroup({"ID": "Tab1", "Weight": 1}, [
+                ui.VGroup({"ID": "Azure TTS", "Weight": 1}, [
                     ui.HGroup({"Weight": 0.7}, [
                         ui.VGroup({"Weight": 1}, [
                             ui.TextEdit({"ID": "AzureTxt", "Text": "","PlaceholderText": "", "Weight": 0.9, "Font": ui.Font({"PixelSize": 15})}),
@@ -536,7 +549,7 @@ win = dispatcher.AddWindow({
                         ])
                     ])
                 ]),
-                ui.VGroup({"ID": "Tab2", "Weight": 1}, [
+                ui.VGroup({"ID": "Minimax TTS", "Weight": 1}, [
                     ui.HGroup({"Weight": 0.7}, [
                         ui.VGroup({"Weight": 0.5}, [
                             ui.TextEdit({"ID": "minimaxText", "PlaceholderText": ""}),
@@ -594,7 +607,48 @@ win = dispatcher.AddWindow({
                         ])
                     ])
                 ]),
-                ui.HGroup({"ID": "Tab3", "Weight": 1}, [
+                ui.VGroup({"ID": "OpenAI TTS", "Weight": 1}, [
+                    ui.HGroup({"Weight": 0.7}, [
+                        ui.VGroup({"Weight": 0.5}, [
+                            ui.TextEdit({"ID": "OpenAIText", "PlaceholderText": ""}),
+                            ui.HGroup({"Weight": 0.1}, [
+                                ui.Button({"ID": "OpenAIGetSubButton", "Text": "从时间线获取字幕", "Weight": 0.7}),
+                            ])
+                        ]),
+                        ui.VGroup({"Weight": 0.5}, [
+                            ui.HGroup({}, [
+                                ui.Label({"ID": "OpenAIModelLabel","Text": "模型:", "Weight": 0}),
+                                ui.ComboBox({"ID": "OpenAIModelCombo", "Text": "选择模型"}),
+                            ]),
+                            ui.HGroup({}, [
+                                ui.Label({"ID": "OpenAIVoiceLabel","Text": "人声:", "Weight": 0}),
+                                ui.ComboBox({"ID": "OpenAIVoiceCombo", "Text": "选择人声"}),
+                            ]),
+                            ui.HGroup({}, [
+                                ui.Label({"ID": "OpenAIInstructionLabel","Text": "指令:", "Weight": 0}),
+                                ui.TextEdit({"ID": "OpenAIInstructionText", "PlaceholderText": ""}),
+                            ]),
+                            ui.HGroup({}, [
+                                ui.Label({"ID": "OpenAIRateLabel","Text": "速度:", "Weight": 0.2}),
+                                ui.Slider({"ID": "OpenAIRateSlider", "Minimum": 25, "Maximum": 400, "Value": 100, "SingleStep": 1, "Weight": 0.6}),
+                                ui.DoubleSpinBox({"ID": "OpenAIRateSpinBox", "Minimum": 0.25, "Maximum": 4.00, "Value": 1.00, "SingleStep": 0.01, "Decimals": 2, "Weight": 0.2})
+                            ]),
+                            ui.HGroup({}, [
+                                ui.Label({"ID": "OpenAIFormatLabel","Text": "格式:", "Weight": 0}),
+                                ui.ComboBox({"ID": "OpenAIFormatCombo", "Text": "选择格式"}),
+                            ]),
+                            ui.HGroup({}, [
+                                ui.Button({"ID": "OpenAIFromSubButton", "Text": "朗读当前字幕"}),
+                                ui.Button({"ID": "OpenAIFromTxtButton", "Text": "朗读文本框"}),
+                                ui.Button({"ID": "OpenAIResetButton", "Text": "重置"})
+                            ]),
+                            ui.HGroup({}, [
+                                ui.Label({"ID": "OpenAIStatusLabel", "Text": " ", "Alignment": {"AlignHCenter": True, "AlignVCenter": True}})
+                            ])
+                        ])
+                    ])
+                ]), 
+                ui.HGroup({"ID": "Config", "Weight": 1}, [
                     ui.VGroup({"Weight": 0.5, "Spacing": 10}, [
                         ui.HGroup({"Weight": 1}, [
                             ui.TextEdit({"ID": "infoTxt", "Text": infomsg_cn, "ReadOnly": True, "Font": ui.Font({"PixelSize": 14})})
@@ -610,11 +664,15 @@ win = dispatcher.AddWindow({
                         ui.HGroup({"Weight": 0.1}, [
                             ui.Label({"Text": "Azure API", "Alignment": {"AlignLeft": True}, "Weight": 0.1}),
                             ui.Button({"ID": "ShowAzure", "Text": "配置","Weight": 0.1,}),
-                            #ui.CheckBox({"ID": "UnuseAPICheckBox", "Text": "停用 API", "Checked": False, "Alignment": {"AlignLeft": True}, "Weight": 0.1})
                         ]),
                         ui.HGroup({"Weight": 0.1}, [
                             ui.Label({"Text": "MiniMax API", "Alignment": {"AlignLeft": True}, "Weight": 0.1}),
                             ui.Button({"ID": "ShowMiniMax", "Text": "配置","Weight": 0.1}),
+                            
+                        ]),
+                        ui.HGroup({"Weight": 0.1}, [
+                            ui.Label({"Text": "OpenAI API", "Alignment": {"AlignLeft": True}, "Weight": 0.1}),
+                            ui.Button({"ID": "ShowOpenAI", "Text": "配置","Weight": 0.1}),
                             
                         ]),
                         ui.HGroup({"Weight": 0.1}, [
@@ -638,7 +696,7 @@ win = dispatcher.AddWindow({
     ]
 )
 
-# 配置窗口1
+# azure配置窗口
 azure_config_window = dispatcher.AddWindow(
     {
         "ID": "AzureConfigWin",
@@ -664,7 +722,7 @@ azure_config_window = dispatcher.AddWindow(
                     ui.LineEdit({"ID": "ApiKey", "Text": "", "EchoMode": "Password", "Weight": 0.8}),
                     
                 ]),
-                ui.CheckBox({"ID": "UnuseAPICheckBox", "Text": "停用 API", "Checked": False, "Alignment": {"AlignLeft": True}, "Weight": 0.1}),
+                ui.CheckBox({"ID": "UnuseAPICheckBox", "Text": "停用 API", "Checked": True, "Alignment": {"AlignLeft": True}, "Weight": 0.1}),
                 ui.HGroup({"Weight": 1}, [
                     ui.Button({"ID": "AzureConfirm", "Text": "确定","Weight": 1}),
                     ui.Button({"ID": "AzureRegisterButton", "Text": "注册","Weight": 1}),
@@ -674,8 +732,42 @@ azure_config_window = dispatcher.AddWindow(
         )
     ]
 )
-
-# 配置窗口2
+# openai配置窗口
+openai_config_window = dispatcher.AddWindow(
+    {
+        "ID": "OpenAIConfigWin",
+        "WindowTitle": "OpenAI API",
+        "Geometry": [900, 400, 400, 200],
+        "Hidden": True,
+        "StyleSheet": """
+        * {
+            font-size: 14px; /* 全局字体大小 */
+        }
+    """
+    },
+    [
+        ui.VGroup(
+            [
+                ui.Label({"ID": "OpenAILabel","Text": "填写OpenAI API信息", "Alignment": {"AlignHCenter": True, "AlignVCenter": True}}),
+                ui.HGroup({"Weight": 1}, [
+                    ui.Label({"ID": "OpenAIBaseURLLabel", "Text": "Base URL", "Alignment": {"AlignRight": False}, "Weight": 0.2}),
+                    ui.LineEdit({"ID": "OpenAIBaseURL", "Text":"","PlaceholderText": "https://api.openai.com/v1", "Weight": 0.8}),
+                ]),
+                ui.HGroup({"Weight": 1}, [
+                    ui.Label({"ID": "OpenAIApiKeyLabel", "Text": "密钥", "Alignment": {"AlignRight": False}, "Weight": 0.2}),
+                    ui.LineEdit({"ID": "OpenAIApiKey", "Text": "", "EchoMode": "Password", "Weight": 0.8}),
+                    
+                ]),
+                ui.HGroup({"Weight": 1}, [
+                    ui.Button({"ID": "OpenAIConfirm", "Text": "确定","Weight": 1}),
+                    ui.Button({"ID": "OpenAIRegisterButton", "Text": "注册","Weight": 1}),
+                ]),
+                
+            ]
+        )
+    ]
+)
+# minimax配置窗口
 minimax_config_window = dispatcher.AddWindow(
     {
         "ID": "MiniMaxConfigWin",
@@ -710,19 +802,24 @@ minimax_config_window = dispatcher.AddWindow(
         )
     ]
 )
+
 translations = {
     "cn": {
-        "Tabs": ["微软语音", "海螺语音", "配置"],
+        "Tabs": ["微软语音", "海螺语音", "OpenAI 语音","配置"],
         "GetSubButton": "从时间线获取字幕",
         "minimaxGetSubButton": "从时间线获取字幕",
+        "OpenAIGetSubButton": "从时间线获取字幕",
         "BreakLabel": "ms",
         "minimaxBreakLabel": "ms",
         "BreakButton": "停顿",
         "minimaxBreakButton": "停顿",
         "AlphabetButton": "发音",
         "minimaxModelLabel": "模型",
+        "OpenAIModelLabel": "模型",
         "minimaxLanguageLabel": "语言",
         "minimaxVoiceLabel": "人声",
+        "OpenAIVoiceLabel": "人声",
+        "OpenAIInstructionLabel": "指令",
         "minimaxPreviewButton":"试听",
         "LanguageLabel": "语言",
         "NameTypeLabel": "类型",
@@ -733,30 +830,36 @@ translations = {
         "StyleDegreeLabel": "风格强度",
         "RateLabel": "语速",
         "minimaxRateLabel": "语速",
+        "OpenAIRateLabel": "语速",
         "PitchLabel": "音调",
         "minimaxPitchLabel": "音调",
         "VolumeLabel": "音量",
         "minimaxVolumeLabel": "音量",
         "OutputFormatLabel": "格式",
         "minimaxFormatLabel": "格式",
+        "OpenAIFormatLabel": "格式",
         "PlayButton": "播放预览",
         "FromSubButton": "朗读当前字幕",
+        "OpenAIFromSubButton": "朗读当前字幕",
         "minimaxFromSubButton": "朗读当前字幕",
         "FromTxtButton": "朗读文本框",
         "minimaxFromTxtButton": "朗读文本框",
+        "OpenAIFromTxtButton": "朗读文本框",
         "ResetButton": "重置",
         "minimaxResetButton": "重置",
+        "OpenAIResetButton": "重置",
         "PathLabel":"保存路径",
         "Browse":"浏览", 
         "ShowAzure":"配置",
         "ShowMiniMax": "配置",
+        "ShowOpenAI": "配置",
         "OpenLinkButton":"关注公众号：游艺所\n\n>>>点击查看更多信息<<<\n\n© 2025, Copyright by HB.",
         "infoTxt":infomsg_cn,
         "AzureLabel":"填写Azure API信息",
         "RegionLabel":"区域",
         "ApiKeyLabel":"密钥",
         "UnuseAPICheckBox":"停用 API",
-        "minimaxSubtitleCheckBox":"生成字幕",
+        "minimaxSubtitleCheckBox":"生成srt字幕",
         "AzureConfirm":"确定",
         "AzureRegisterButton":"注册",
         "minimaxLabel":"填写MiniMax API信息",
@@ -764,20 +867,30 @@ translations = {
         "intlCheckBox": "海外",
         "MiniMaxConfirm":"确定",
         "minimaxRegisterButton":"注册",
+        "OpenAILabel":"填写OpenAI API信息",
+        "OpenAIBaseURLLabel":"Base URL",
+        "OpenAIApiKeyLabel":"密钥",
+        "OpenAIConfirm":"确定",
+        "OpenAIRegisterButton":"注册",
+
     },
 
     "en": {
-        "Tabs": ["Azure TTS", "MiniMax TTS", "Configuration"],
+        "Tabs": ["Azure TTS", "MiniMax TTS","OpenAI TTS", "Configuration"],
         "GetSubButton": "Timeline Subs",
         "minimaxGetSubButton": "Timeline Subs",
+        "OpenAIGetSubButton": "Timeline Subs",
         "BreakLabel": "ms",
         "minimaxBreakLabel": "ms",
         "BreakButton": "Break",
         "minimaxBreakButton": "Break",
         "AlphabetButton": "Pronunciation",
         "minimaxModelLabel": "Model",
+        "OpenAIModelLabel": "Model",
         "minimaxLanguageLabel": "Language",
         "minimaxVoiceLabel": "Voice",
+        "OpenAIVoiceLabel": "Voice",
+        "OpenAIInstructionLabel": "Instruction",
         "minimaxPreviewButton":"Preview",
         "LanguageLabel": "Language",
         "NameTypeLabel": "Type",
@@ -788,23 +901,29 @@ translations = {
         "StyleDegreeLabel": "Style Degree",
         "RateLabel": "Rate",
         "minimaxRateLabel": "Rate",
+        "OpenAIRateLabel": "Rate",
         "PitchLabel": "Pitch",
         "minimaxPitchLabel": "Pitch",
         "VolumeLabel": "Volume",
         "minimaxVolumeLabel": "Volume",
         "OutputFormatLabel": "Format",
         "minimaxFormatLabel": "Format",
+        "OpenAIFormatLabel": "Format",
         "PlayButton": "Preview",
         "FromSubButton": "Read Subs",
         "minimaxFromSubButton": "Read Subs",
+        "OpenAIFromSubButton": "Read Subs",
         "FromTxtButton": "Read Textbox",
         "minimaxFromTxtButton": "Read Textbox",
+        "OpenAIFromTxtButton": "Read Textbox",
         "ResetButton": "Reset",
         "minimaxResetButton": "Reset",
+        "OpenAIResetButton": "Reset",
         "PathLabel":"Path",
         "Browse":"Browse", 
         "ShowAzure":"Config",
         "ShowMiniMax": "Config",
+        "ShowOpenAI": "Config",
         "OpenLinkButton":"😊Buy Me A Coffe😊\n\n© 2025, Copyright by HB.",
         "infoTxt":infomsg_en,
         "AzureLabel":"Azure API",
@@ -819,11 +938,17 @@ translations = {
         "intlCheckBox": "intl",
         "MiniMaxConfirm":"OK",
         "minimaxRegisterButton":"Register",
+        "OpenAILabel":"OpenAI API",
+        "OpenAIBaseURLLabel":"Base URL",
+        "OpenAIApiKeyLabel":"Key",
+        "OpenAIConfirm":"OK",
+        "OpenAIRegisterButton":"Register",
     }
 }
 items = win.GetItems()
 azure_items = azure_config_window.GetItems()
 minimax_items = minimax_config_window.GetItems()
+openai_items = openai_config_window.GetItems()
 items["StatusLabel"].Text = ""
 items["MyStack"].CurrentIndex = 0
 
@@ -861,80 +986,41 @@ stream = None
 voice_file = os.path.join(script_path, 'voices_list.json')
 with open(voice_file, "r", encoding="utf-8") as file:
     voices_data = json.load(file)
-voices = voices_data.get("azure_voice")
-edgeTTS_voices = voices_data.get("edge_voice")
+azure_voices = voices_data.get("azure_voice", {})
+edgeTTS_voices = voices_data.get("edge_voice", {})
+openai_voices = voices_data.get("openai_voice", {}).get("voices", [])
+minimax_voices = voices_data.get("minimax_voices", [])
+
+# 将每个子列表转换为元组
+def return_voice_name(name):
+    for lang, data in azure_voices.items():
+        for voice in data['voices']:
+            voice_name = list(voice.keys())[0]
+            if voice[voice_name].get("Name") == name:
+                return voice_name
+    return None
+
 
 # 填充ComboBox
-models = ["speech-01-turbo", "speech-01-240228","speech-01-turbo-240228","speech-01-hd"]
-for model in models:
+minimax_models = ["speech-01-turbo", "speech-01-240228","speech-01-turbo-240228","speech-01-hd"]
+for model in minimax_models:
     items["minimaxModelCombo"].AddItem(model)
 
-minimax_voices = [
-    ("青涩青年", "male-qn-qingse"),
-    ("精英青年", "male-qn-jingying"),
-    ("霸道青年", "male-qn-badao"),
-    ("青年大学生", "male-qn-daxuesheng"),
-    ("少女", "female-shaonv"),
-    ("御姐", "female-yujie"),
-    ("成熟女性", "female-chengshu"),
-    ("甜美女性", "female-tianmei"),
-    ("男性主持人", "presenter_male"),
-    ("女性主持人", "presenter_female"),
-    ("男性有声书1", "audiobook_male_1"),
-    ("男性有声书2", "audiobook_male_2"),
-    ("女性有声书1", "audiobook_female_1"),
-    ("女性有声书2", "audiobook_female_2"),
-    ("青涩青年-beta", "male-qn-qingse-jingpin"),
-    ("精英青年-beta", "male-qn-jingying-jingpin"),
-    ("霸道青年-beta", "male-qn-badao-jingpin"),
-    ("青年大学生-beta", "male-qn-daxuesheng-jingpin"),
-    ("少女-beta", "female-shaonv-jingpin"),
-    ("御姐-beta", "female-yujie-jingpin"),
-    ("成熟女性-beta", "female-chengshu-jingpin"),
-    ("甜美女性-beta", "female-tianmei-jingpin"),
-    ("聪明男童", "clever_boy"),
-    ("可爱男童", "cute_boy"),
-    ("萌萌女童", "lovely_girl"),
-    ("卡通猪小琪", "cartoon_pig"),
-    ("病娇弟弟", "bingjiao_didi"),
-    ("俊朗男友", "junlang_nanyou"),
-    ("纯真学弟", "chunzhen_xuedi"),
-    ("冷淡学长", "lengdan_xiongzhang"),
-    ("霸道少爷", "badao_shaoye"),
-    ("甜心小玲", "tianxin_xiaoling"),
-    ("俏皮萌妹", "qiaopi_mengmei"),
-    ("妩媚御姐", "wumei_yujie"),
-    ("嗲嗲学妹", "diadia_xuemei"),
-    ("淡雅学姐", "danya_xuejie"),
-    ("Santa Claus", "Santa_Claus"),
-    ("Grinch", "Grinch"),
-    ("Rudolph", "Rudolph"),
-    ("Arnold", "Arnold"),
-    ("Charming Santa", "Charming_Santa"),
-    ("Charming Lady", "Charming_Lady"),
-    ("Sweet Girl", "Sweet_Girl"),
-    ("Cute Elf", "Cute_Elf"),
-    ("Attractive Girl", "Attractive_Girl"),
-    ("Serene Woman", "Serene_Woman"),
-    # 海外专用音色
-    ("Wise Woman（海外）", "Wise_Woman"),
-    ("Friendly Person（海外）", "Friendly_Person"),
-    ("Inspirational Girl（海外）", "Inspirational_girl"),
-    ("Deep Voice Man（海外）", "Deep_Voice_Man"),
-    ("Calm Woman（海外）", "Calm_Woman"),
-    ("Casual Guy（海外）", "Casual_Guy"),
-    ("Lively Girl（海外）", "Lively_Girl"),
-    ("Patient Man（海外）", "Patient_Man"),
-    ("Young Knight（海外）", "Young_Knight"),
-    ("Determined Man（海外）", "Determined_Man"),
-    ("Lovely Girl（海外）", "Lovely_Girl"),
-    ("Decent Boy（海外）", "Decent_Boy"),
-    ("Imposing Manner（海外）", "Imposing_Manner"),
-    ("Elegant Man（海外）", "Elegant_Man"),
-    ("Abbess（海外）", "Abbess"),
-    ("Sweet Girl 2（海外）", "Sweet_Girl_2"),
-    ("Exuberant Girl（海外）", "Exuberant_Girl"),
-]
+openai_models = ["gpt-4o-mini-tts","tts-1", "tts-1-hd"]
+for model in openai_models:
+    items["OpenAIModelCombo"].AddItem(model)
+
+
+# 将声音选项添加到 minimaxVoiceCombo
+for voice in openai_voices:
+    items["OpenAIVoiceCombo"].AddItem(voice)
+
+for voice  in minimax_voices:
+    if items["LangEnCheckBox"].Checked:
+        items["minimaxVoiceCombo"].AddItem(voice["en"])  # 选中时添加英文
+    else:
+        items["minimaxVoiceCombo"].AddItem(voice["cn"]) # 未选中时添加中文
+   
 
 minimax_language = [
     ("自动", "auto"),
@@ -958,14 +1044,6 @@ minimax_language = [
 
 ]
 
-# 将声音选项添加到 minimaxVoiceCombo
-for cn, en in minimax_voices:
-    if items["LangEnCheckBox"].Checked:
-        items["minimaxVoiceCombo"].AddItem(en)  # 选中时添加英文
-    else:
-        items["minimaxVoiceCombo"].AddItem(cn)  # 未选中时添加中文
-   
-
 # 将语言选项添加到 minimaxLanguageCombo
 for cn, en in minimax_language:
     if items["LangEnCheckBox"].Checked:
@@ -985,7 +1063,6 @@ emotions = [
     ("中性", "neutral")
 ]
 
-
 # 将情绪选项添加到 minimaxEmotionCombo
 for cn, en in emotions:
     if items["LangEnCheckBox"].Checked:
@@ -997,9 +1074,12 @@ for cn, en in emotions:
 items["minimaxFormatCombo"].AddItem("mp3")
 items["minimaxFormatCombo"].AddItem("wav")
 #items["minimaxFormatCombo"].AddItem("pcm")
+items["OpenAIFormatCombo"].AddItem("mp3")
+items["OpenAIFormatCombo"].AddItem("wav")
+
 
 # 模型选项切换逻辑
-def on_model_combo_changed(event):
+def on_minimax_model_combo_changed(event):
     selected_model = items["minimaxModelCombo"].CurrentText
     if selected_model not in ["speech-01-turbo", "speech-01-hd"]:
         items["minimaxEmotionCombo"].CurrentIndex = 0
@@ -1007,20 +1087,23 @@ def on_model_combo_changed(event):
     else:
         items["minimaxEmotionCombo"].Enabled = True  # 禁用情绪选择
 
-# 绑定事件
-win.On["minimaxModelCombo"].CurrentIndexChanged = on_model_combo_changed
+win.On["minimaxModelCombo"].CurrentIndexChanged = on_minimax_model_combo_changed
 
+def on_openai_model_combo_changed(event):
+    selected_model = items["OpenAIModelCombo"].CurrentText
+    if selected_model not in ["tts-1", "tts-1-hd"]:
+        items["OpenAIInstructionText"].PlaceholderText = ""
+        items["OpenAIInstructionText"].Enabled = True  
+    else:
+        items["OpenAIInstructionText"].PlaceholderText = "Does not work with tts-1 or tts-1-hd."
+        items["OpenAIInstructionText"].Enabled = False  
+
+win.On["OpenAIModelCombo"].CurrentIndexChanged = on_openai_model_combo_changed
 # 在启动时检查模型状态
-on_model_combo_changed({"Index": items["minimaxModelCombo"].CurrentIndex})
+on_minimax_model_combo_changed({"Index": items["minimaxModelCombo"].CurrentIndex})
+on_openai_model_combo_changed({"Index": items["OpenAIModelCombo"].CurrentIndex})
 
-# 将每个子列表转换为元组
-def return_voice_name(name):
-    for lang, data in voices.items():
-        for voice in data['voices']:
-            voice_name = list(voice.keys())[0]
-            if voice[voice_name].get("Name") == name:
-                return voice_name
-    return None
+
 # 汉化映射字典
 StyleMapping = {
     "cheerful": "愉悦",
@@ -1248,6 +1331,8 @@ def switch_language(lang):
             azure_items[item_id].Text = text_value
         elif item_id in minimax_items:    
             minimax_items[item_id].Text = text_value
+        elif item_id in openai_items:    
+            openai_items[item_id].Text = text_value
         else:
             print(f"[Warning] items 中不存在 ID 为 {item_id} 的控件，无法设置文本！")
 
@@ -1263,11 +1348,12 @@ def switch_language(lang):
         else:
             items["minimaxEmotionCombo"].AddItem(cn)  # 未选中时添加中文
     
-    for cn, en in minimax_voices:
+    for voice  in minimax_voices:
         if items["LangEnCheckBox"].Checked:
-            items["minimaxVoiceCombo"].AddItem(en)  # 选中时添加英文
+            items["minimaxVoiceCombo"].AddItem(voice["en"])  # 选中时添加英文
         else:
-            items["minimaxVoiceCombo"].AddItem(cn)  # 未选中时添加中文    
+            items["minimaxVoiceCombo"].AddItem(voice["cn"]) # 未选中时添加中文 
+
     for cn, en in minimax_language:
         if items["LangEnCheckBox"].Checked:
             items["minimaxLanguageCombo"].AddItem(en)  
@@ -1342,7 +1428,7 @@ voice_dict = {}
 if azure_items["UnuseAPICheckBox"].Checked:
     voice_dict = edgeTTS_voices
 else:
-    voice_dict = voices
+    voice_dict = azure_voices
 
 Language = [voice_dict[locale]['language'] for locale in voice_dict.keys()]
 
@@ -1352,7 +1438,6 @@ for language in Language:
 if saved_settings:
     azure_items["ApiKey"].Text = saved_settings.get("API_KEY", default_settings["API_KEY"])
     azure_items["Region"].Text = saved_settings.get("REGION", default_settings["REGION"])
-    items["Path"].Text = saved_settings.get("OUTPUT_DIRECTORY", default_settings["OUTPUT_DIRECTORY"])
     items["LanguageCombo"].CurrentIndex = saved_settings.get("LANGUAGE", default_settings["LANGUAGE"])
     items["NameTypeCombo"].CurrentIndex = saved_settings.get("TYPE", default_settings["TYPE"])
     items["NameCombo"].CurrentIndex = saved_settings.get("NAME", default_settings["NAME"])
@@ -1375,8 +1460,16 @@ if saved_settings:
     items["minimaxRateSpinBox"].Value = saved_settings.get("minimax_Rate", default_settings["minimax_Rate"])
     items["minimaxVolumeSpinBox"].Value = saved_settings.get("minimax_Volume", default_settings["minimax_Volume"])
     items["minimaxPitchSpinBox"].Value = saved_settings.get("minimax_Pitch", default_settings["minimax_Pitch"])
-    items["minimaxFormatCombo"].SetCurrentText(saved_settings.get("minimax_Format", default_settings["minimax_Format"]))
+    items["minimaxFormatCombo"].CurrentIndex = saved_settings.get("minimax_Format", default_settings["minimax_Format"])
     
+    openai_items["OpenAIApiKey"].Text = saved_settings.get("OpenAI_API_KEY", default_settings["OpenAI_API_KEY"])
+    openai_items["OpenAIBaseURL"].Text = saved_settings.get("OpenAI_BASE_URL", default_settings["OpenAI_BASE_URL"])    
+    items["OpenAIModelCombo"].CurrentIndex = saved_settings.get("OpenAI_Model", default_settings["OpenAI_Model"])
+    items["OpenAIVoiceCombo"].CurrentIndex= saved_settings.get("OpenAI_Voice", default_settings["OpenAI_Voice"])
+    items["OpenAIRateSpinBox"].Value = saved_settings.get("OpenAI_Rate", default_settings["OpenAI_Rate"])
+    items["OpenAIFormatCombo"].CurrentIndex = saved_settings.get("OpenAI_Format", default_settings["OpenAI_Format"])
+    items["OpenAIInstructionText"].Text = saved_settings.get("OpenAI_Instruction", default_settings["OpenAI_Instruction"])
+
 def flagmark():
     global flag
     flag = True
@@ -1424,6 +1517,15 @@ win.On.minimaxRateSlider.ValueChanged = on_minimax_rate_slider_value_changed
 def on_minimax_rate_spinbox_value_changed(ev):
     last_updates["rate"] = handle_value_change(ev, last_updates["rate"], update_intervals["rate"], "minimaxRateSpinBox", "minimaxRateSlider", 100)
 win.On.minimaxRateSpinBox.ValueChanged = on_minimax_rate_spinbox_value_changed
+
+# 速率 Slider 和 SpinBox 事件处理
+def on_openai_rate_slider_value_changed(ev):
+    last_updates["rate"] = handle_value_change(ev, last_updates["rate"], update_intervals["rate"], "OpenAIRateSlider", "OpenAIRateSpinBox", 1/100.0)
+win.On.OpenAIRateSlider.ValueChanged = on_openai_rate_slider_value_changed
+
+def on_openai_rate_spinbox_value_changed(ev):
+    last_updates["rate"] = handle_value_change(ev, last_updates["rate"], update_intervals["rate"], "OpenAIRateSpinBox", "OpenAIRateSlider", 100)
+win.On.OpenAIRateSpinBox.ValueChanged = on_openai_rate_spinbox_value_changed
 
 # 音调 Slider 和 SpinBox 事件处理
 def on_minimax_pitch_slider_value_changed(ev):
@@ -1497,7 +1599,7 @@ def on_unuseapi_checkbox_clicked(ev):
         voice_dict = edgeTTS_voices
     else:
         toggle_api_checkboxes(True)
-        voice_dict = voices
+        voice_dict = azure_voices
     Language = [voice_dict[locale]['language'] for locale in voice_dict.keys()]
     for language in Language:
         items["LanguageCombo"].AddItem(language)
@@ -1533,7 +1635,7 @@ def on_name_combo_current_index_changed(ev):
     # 查找并更新风格选项
     found_voice = False
     valid_styles = False
-    for voice_locale, locale_data in voices.items():
+    for voice_locale, locale_data in azure_voices.items():
         for voice_dict in locale_data["voices"]:
             if selected_voice in voice_dict:
                 found_voice = True
@@ -1691,10 +1793,12 @@ def on_getsub_button_clicked(ev):
     subtitle_texts = get_subtitle_texts(subtitles)
     items["AzureTxt"].Text = subtitle_texts
     items["minimaxText"].Text = subtitle_texts
+    items["OpenAIText"].Text = subtitle_texts
     print_srt(subtitles,frame_rate)
 win.On.GetSubButton.Clicked = on_getsub_button_clicked
 win.On.minimaxGetSubButton.Clicked = on_getsub_button_clicked
-    
+win.On.OpenAIGetSubButton.Clicked = on_getsub_button_clicked
+
 def process_text_with_breaks(parent, text):
     parts = text.split('<break')
     for i, part in enumerate(parts):
@@ -1823,6 +1927,7 @@ def update_status(status_tuple):
     message = status_tuple[0] if use_english else status_tuple[1]
     items["StatusLabel"].Text = message
     items["minimaxStatusLabel"].Text = message
+    items["OpenAIStatusLabel"].Text = message
     
 
 def synthesize_speech(service_region, speech_key, lang, voice_name, subtitle, rate, volume, style, style_degree, multilingual,pitch,audio_format, audio_output_config):
@@ -2137,7 +2242,13 @@ def on_minimax_preview_button_click(ev):
             show_warning_message(STATUS_MESSAGES.download_json)
             return
         voice_name = items["minimaxVoiceCombo"].CurrentText  # 目标音色
-        voice_id = next((cn for cn, en in minimax_voices if voice_name in (cn, en)), "")
+
+        voice_id = next(
+            (v["cn"] for v in minimax_voices 
+            if voice_name == v["cn"] or voice_name == v["en"]),
+            ""
+        )
+
         # 播放音频
         play_audio_segment(pcm_file, json_file, voice_id)
 
@@ -2166,8 +2277,14 @@ def process_minimax_request(text_func, timeline_func):
         url = f"https://api.minimax.chat/v1/t2a_v2?GroupId={group_id}"
     
     # 获取 voice_id 和 emotion
-    voice_name = items["minimaxVoiceCombo"].CurrentText
-    voice_id = next((en for cn, en in minimax_voices if voice_name in (cn, en)), "")
+    voice_name = items["minimaxVoiceCombo"].CurrentText  # 目标音色
+
+    voice_id = next(
+        (v["en"] for v in minimax_voices 
+        if voice_name == v["cn"] or voice_name == v["en"]),
+        ""
+    )
+
     lang_name = items["minimaxLanguageCombo"].CurrentText
     lang_id = next((en for cn, en in minimax_language if lang_name in (cn, en)), "")
     emotion_name = items["minimaxEmotionCombo"].CurrentText
@@ -2310,6 +2427,118 @@ def json_to_srt(json_data, srt_path):
         print(f"SRT 文件已保存：{srt_path}")
     except Exception as e:
         print(f"保存 SRT 文件失败: {e}")
+
+def process_openai_request(text_func, timeline_func):
+    update_status(STATUS_MESSAGES.synthesizing)
+    save_path = items["Path"].Text
+    if not save_path:
+        show_warning_message(STATUS_MESSAGES.select_save_path)
+        return False
+
+    base_url = openai_items["OpenAIBaseURL"].Text.strip().rstrip('/') or "https://api.openai.com/v1"
+    api_key  = openai_items["OpenAIApiKey"].Text
+    
+    if not api_key:
+        show_warning_message(STATUS_MESSAGES.enter_api_key)
+        update_status(STATUS_MESSAGES.synthesis_failed)
+        return False
+
+    model       = items["OpenAIModelCombo"].CurrentText
+    text        = text_func()
+    voice_name  = items["OpenAIVoiceCombo"].CurrentText
+    speed       = items["OpenAIRateSpinBox"].Value
+    file_format = items["OpenAIFormatCombo"].CurrentText
+    filename    = generate_filename(save_path, text, f".{file_format}")
+
+    url = f"{base_url}/audio/speech"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "model": model,
+        "input": text,
+        "voice": voice_name,
+        "response_format": file_format,
+        "speed": speed
+    }
+    
+    if model not in ["tts-1", "tts-1-hd"]:
+        instructions = items["OpenAIInstructionText"].PlainText.strip()
+        if instructions:
+            payload["instructions"] = instructions
+    print(payload)
+    try:
+        resp = requests.post(url, headers=headers, json=payload)
+    except Exception as e:
+        print(f"请求 OpenAI 失败：{e}")
+        update_status(STATUS_MESSAGES.synthesis_failed)
+        return False
+
+    if resp.status_code == 200:
+        try:
+            with open(filename, "wb") as f:
+                for chunk in resp.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+            if os.path.exists(filename):
+                start_frame, end_frame = timeline_func()
+                add_to_media_pool_and_timeline(start_frame, end_frame, filename)
+                update_status(STATUS_MESSAGES.loaded_to_timeline)
+                return True
+            else:
+                update_status(STATUS_MESSAGES.audio_save_failed)
+                print("音频文件保存失败")
+        except Exception as e:
+            print(f"写入文件失败：{e}")
+            update_status(STATUS_MESSAGES.synthesis_failed)
+    else:
+        try:
+            error_detail = resp.json().get("error", resp.text)
+        except Exception:
+            error_detail = resp.text
+        print(f"OpenAI 返回错误 (HTTP {resp.status_code})：{error_detail}")
+        update_status(STATUS_MESSAGES.synthesis_failed)
+
+    return False
+
+# 针对字幕的处理函数
+def on_openai_fromsub_button_clicked(ev):
+    project_manager = resolve.GetProjectManager()
+    current_project = project_manager.GetCurrentProject()
+    current_timeline = current_project.GetCurrentTimeline()
+    if not current_timeline:
+        show_warning_message(STATUS_MESSAGES.create_timeline)
+        return False
+
+    process_openai_request(
+        text_func=lambda: get_current_subtitle(current_timeline)[0],
+        timeline_func=lambda: get_current_subtitle(current_timeline)[1:]
+        )
+
+win.On.OpenAIFromSubButton.Clicked = on_openai_fromsub_button_clicked
+
+def on_openai_fromtxt_button_clicked(ev):
+    project_manager = resolve.GetProjectManager()
+    current_project = project_manager.GetCurrentProject()
+    current_timeline = current_project.GetCurrentTimeline()
+    if not current_timeline:
+        show_warning_message(STATUS_MESSAGES.create_timeline)
+        return False
+
+    process_openai_request(
+        text_func=lambda: items["OpenAIText"].PlainText,
+        timeline_func=lambda: (
+            # 动态获取当前帧和时间线结束帧
+            timecode_to_frames(
+                current_timeline.GetCurrentTimecode(),
+                float(current_timeline.GetSetting("timelineFrameRate"))
+            ),
+            current_timeline.GetEndFrame()
+        )
+    )
+ 
+win.On.OpenAIFromTxtButton.Clicked = on_openai_fromtxt_button_clicked
 
 # 针对字幕的处理函数
 def on_minimax_fromsub_button_clicked(ev):
@@ -2477,9 +2706,7 @@ def on_alphabet_button_clicked(ev):
 win.On.AlphabetButton.Clicked = on_alphabet_button_clicked
 
 def on_reset_button_clicked(ev):
-    #items["ApiKey"].Text = default_settings["API_KEY"]
-    #items["Path"].Text = default_settings["OUTPUT_DIRECTORY"]
-    #items["Region"].Text = default_settings["REGION"]
+
     items["LanguageCombo"].CurrentIndex = default_settings["LANGUAGE"]
     items["NameTypeCombo"].CurrentIndex = default_settings["TYPE"]
     items["NameCombo"].CurrentIndex = default_settings["NAME"]
@@ -2497,10 +2724,6 @@ def on_minimax_reset_button_clicked(ev):
     """
     重置所有输入控件为默认设置。
     """
-    # 将控件值重置为默认设置
-    #items["minimaxApiKey"].Text = default_settings["minimax_API_KEY"]
-    #items["minimaxGroupID"].Text = default_settings["minimax_GROUP_ID"]
-    #items["Path"].Text = default_settings["Path"]
     items["minimaxModelCombo"].CurrentIndex = default_settings["minimax_Model"]
     items["minimaxVoiceCombo"].CurrentIndex = default_settings["minimax_Voice"]
     items["minimaxLanguageCombo"].CurrentIndex = default_settings["minimax_Language"]
@@ -2508,12 +2731,25 @@ def on_minimax_reset_button_clicked(ev):
     items["minimaxRateSpinBox"].Value = default_settings["minimax_Rate"]
     items["minimaxVolumeSpinBox"].Value = default_settings["minimax_Volume"]
     items["minimaxPitchSpinBox"].Value = default_settings["minimax_Pitch"]
-    items["minimaxFormatCombo"].SetCurrentText(default_settings["minimax_Format"])
+    items["minimaxFormatCombo"].CurrentIndex=default_settings["minimax_Format"]
     items["minimaxBreakSpinBox"].Value = default_settings["minimax_Break"]
     items["minimaxSubtitleCheckBox"].Checked = default_settings["minimax_SubtitleCheckBox"]
 
 # 绑定重置按钮事件
 win.On.minimaxResetButton.Clicked = on_minimax_reset_button_clicked
+
+def on_openai_reset_button_clicked(ev):
+    """
+    重置所有输入控件为默认设置。
+    """
+    items["OpenAIModelCombo"].CurrentIndex = default_settings["OpenAI_Model"]
+    items["OpenAIVoiceCombo"].CurrentIndex = default_settings["OpenAI_Voice"]
+    items["OpenAIRateSpinBox"].Value = default_settings["minimax_Rate"]
+    items["OpenAIFormatCombo"].CurrentIndex = default_settings["OpenAI_Format"]
+    items["OpenAIInstructionText"].Text = default_settings["OpenAI_Instruction"]
+    
+# 绑定重置按钮事件
+win.On.OpenAIResetButton.Clicked = on_openai_reset_button_clicked
 
 def on_browse_button_clicked(ev):
     current_path = items["Path"].Text
@@ -2536,7 +2772,6 @@ def close_and_save(settings_file):
     settings = {
         "API_KEY": azure_items["ApiKey"].Text,
         "REGION": azure_items["Region"].Text,
-        "OUTPUT_DIRECTORY": items["Path"].Text,
         "LANGUAGE": items["LanguageCombo"].CurrentIndex,
         "TYPE": items["NameTypeCombo"].CurrentIndex,
         "NAME": items["NameCombo"].CurrentIndex,
@@ -2560,8 +2795,16 @@ def close_and_save(settings_file):
         "minimax_Rate": items["minimaxRateSpinBox"].Value,
         "minimax_Volume": items["minimaxVolumeSpinBox"].Value,
         "minimax_Pitch": items["minimaxPitchSpinBox"].Value,
-        "minimax_Format": items["minimaxFormatCombo"].CurrentText,
+        "minimax_Format": items["minimaxFormatCombo"].CurrentIndex,
         "minimax_Break":items["minimaxBreakSpinBox"].Value,
+
+        "OpenAI_API_KEY": openai_items["OpenAIApiKey"].Text,
+        "OpenAI_BASE_URL": openai_items["OpenAIBaseURL"].Text,
+        "OpenAI_Model": items["OpenAIModelCombo"].CurrentIndex,
+        "OpenAI_Voice": items["OpenAIVoiceCombo"].CurrentIndex,
+        "OpenAI_Rate": items["OpenAIRateSpinBox"].Value,
+        "OpenAI_Format": items["OpenAIFormatCombo"].CurrentIndex,
+        "OpenAI_Instruction":items["OpenAIInstructionText"].PlainText,
 
         "CN":items["LangCnCheckBox"].Checked,
         "EN":items["LangEnCheckBox"].Checked,
@@ -2600,6 +2843,10 @@ def on_show_minimax(ev):
     minimax_config_window.Show()
 win.On.ShowMiniMax.Clicked = on_show_minimax
 
+def on_show_openai(ev):
+    openai_config_window.Show()
+win.On.ShowOpenAI.Clicked = on_show_openai
+
 # Azure配置窗口按钮事件
 def on_azure_confirm(ev):
     print("Azure API 配置完成")
@@ -2620,6 +2867,16 @@ def on_minimax_confirm_close(ev):
     minimax_config_window.Hide()
 minimax_config_window.On.MiniMaxConfigWin.Close = on_minimax_confirm_close
 
+# OpenAI配置窗口按钮事件
+def on_openai_confirm(ev):
+    print("OpenAI API 配置完成")
+    openai_config_window.Hide()
+openai_config_window.On.OpenAIConfirm.Clicked = on_openai_confirm
+
+def on_openai_confirm_close(ev):
+    openai_config_window.Hide()
+openai_config_window.On.OpenAIConfigWin.Close = on_openai_confirm_close
+
 def on_close(ev):
     close_and_save(settings_file)
     dispatcher.ExitLoop()
@@ -2631,4 +2888,5 @@ win.Show()
 dispatcher.RunLoop()
 azure_config_window.Hide()
 minimax_config_window.Hide()
+openai_config_window.Hide()
 win.Hide()
