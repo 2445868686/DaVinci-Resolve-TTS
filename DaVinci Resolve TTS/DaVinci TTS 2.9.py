@@ -367,6 +367,7 @@ default_settings = {
     "OpenAI_Rate": 1.0,
     "OpenAI_Format": 0,
     "OpenAI_Instruction":"",
+    "OpenAI_Preset":0,
     
     "CN":True,
     "EN":False,
@@ -623,6 +624,9 @@ win = dispatcher.AddWindow({
                             ui.HGroup({}, [
                                 ui.Label({"ID": "OpenAIVoiceLabel","Text": "人声:", "Weight": 0}),
                                 ui.ComboBox({"ID": "OpenAIVoiceCombo", "Text": "选择人声"}),
+                                ui.Label({"ID": "OpenAIPresetLabel","Text": "预设:", "Weight": 0}),
+                                ui.ComboBox({"ID": "OpenAIPresetCombo", "Text": "预设"}),
+                                ui.Button({"ID": "OpenAIPreviewButton", "Text": "试听"})
                             ]),
                             ui.HGroup({}, [
                                 ui.Label({"ID": "OpenAIInstructionLabel","Text": "指令:", "Weight": 0}),
@@ -819,6 +823,7 @@ translations = {
         "minimaxLanguageLabel": "语言",
         "minimaxVoiceLabel": "人声",
         "OpenAIVoiceLabel": "人声",
+        "OpenAIPresetLabel": "预设",
         "OpenAIInstructionLabel": "指令",
         "minimaxPreviewButton":"试听",
         "LanguageLabel": "语言",
@@ -890,6 +895,7 @@ translations = {
         "minimaxLanguageLabel": "Language",
         "minimaxVoiceLabel": "Voice",
         "OpenAIVoiceLabel": "Voice",
+        "OpenAIPresetLabel": "Preset",
         "OpenAIInstructionLabel": "Instruction",
         "minimaxPreviewButton":"Preview",
         "LanguageLabel": "Language",
@@ -990,6 +996,24 @@ azure_voices = voices_data.get("azure_voice", {})
 edgeTTS_voices = voices_data.get("edge_voice", {})
 openai_voices = voices_data.get("openai_voice", {}).get("voices", [])
 minimax_voices = voices_data.get("minimax_voices", [])
+
+preset_file = os.path.join(script_path, 'instruction.json')
+with open(preset_file, "r", encoding="utf-8") as file:
+    preset_data = json.load(file)
+
+for preset_name in preset_data:
+    items["OpenAIPresetCombo"].AddItem(preset_name)
+
+# 选项变更时触发的函数
+def on_openai_preset_combo_changed(event):
+    # 获取当前选中的 preset 名称
+    selected_preset = items["OpenAIPresetCombo"].CurrentText
+    if selected_preset in preset_data:
+        description = preset_data[selected_preset]["Description"]
+        items["OpenAIInstructionText"].Text = description
+    else:
+        items["OpenAIInstructionText"].Text = "（未找到对应的描述）"
+win.On["OpenAIPresetCombo"].CurrentIndexChanged = on_openai_preset_combo_changed
 
 # 将每个子列表转换为元组
 def return_voice_name(name):
@@ -1094,9 +1118,12 @@ def on_openai_model_combo_changed(event):
     if selected_model not in ["tts-1", "tts-1-hd"]:
         items["OpenAIInstructionText"].PlaceholderText = ""
         items["OpenAIInstructionText"].Enabled = True  
+        items["OpenAIPresetCombo"].Enabled = True  
     else:
         items["OpenAIInstructionText"].PlaceholderText = "Does not work with tts-1 or tts-1-hd."
-        items["OpenAIInstructionText"].Enabled = False  
+        items["OpenAIInstructionText"].Enabled = False
+        items["OpenAIPresetCombo"].CurrentIndex = 0    
+        items["OpenAIPresetCombo"].Enabled = False  
 
 win.On["OpenAIModelCombo"].CurrentIndexChanged = on_openai_model_combo_changed
 # 在启动时检查模型状态
@@ -1466,6 +1493,7 @@ if saved_settings:
     openai_items["OpenAIBaseURL"].Text = saved_settings.get("OpenAI_BASE_URL", default_settings["OpenAI_BASE_URL"])    
     items["OpenAIModelCombo"].CurrentIndex = saved_settings.get("OpenAI_Model", default_settings["OpenAI_Model"])
     items["OpenAIVoiceCombo"].CurrentIndex= saved_settings.get("OpenAI_Voice", default_settings["OpenAI_Voice"])
+    items["OpenAIPresetCombo"].CurrentIndex = saved_settings.get("OpenAI_Preset", default_settings["OpenAI_Preset"])
     items["OpenAIRateSpinBox"].Value = saved_settings.get("OpenAI_Rate", default_settings["OpenAI_Rate"])
     items["OpenAIFormatCombo"].CurrentIndex = saved_settings.get("OpenAI_Format", default_settings["OpenAI_Format"])
     items["OpenAIInstructionText"].Text = saved_settings.get("OpenAI_Instruction", default_settings["OpenAI_Instruction"])
@@ -2747,6 +2775,7 @@ def on_openai_reset_button_clicked(ev):
     items["OpenAIRateSpinBox"].Value = default_settings["minimax_Rate"]
     items["OpenAIFormatCombo"].CurrentIndex = default_settings["OpenAI_Format"]
     items["OpenAIInstructionText"].Text = default_settings["OpenAI_Instruction"]
+    items["OpenAIPresetCombo"].CurrentIndex = default_settings["OpenAI_Preset"]
     
 # 绑定重置按钮事件
 win.On.OpenAIResetButton.Clicked = on_openai_reset_button_clicked
@@ -2805,6 +2834,7 @@ def close_and_save(settings_file):
         "OpenAI_Rate": items["OpenAIRateSpinBox"].Value,
         "OpenAI_Format": items["OpenAIFormatCombo"].CurrentIndex,
         "OpenAI_Instruction":items["OpenAIInstructionText"].PlainText,
+        "OpenAI_Preset":items["OpenAIPresetCombo"].CurrentIndex,
 
         "CN":items["LangCnCheckBox"].Checked,
         "EN":items["LangEnCheckBox"].Checked,
@@ -2820,6 +2850,11 @@ def on_open_link_button_clicked(ev):
     else :
         webbrowser.open("https://mp.weixin.qq.com/s?__biz=MzUzMTk2MDU5Nw==&mid=2247484626&idx=1&sn=e5eef7e48fbfbf37f208ed9a26c5475a&chksm=fabbc2a8cdcc4bbefcb7f6c72a3754335c25ec9c3e408553ec81c009531732e82cbab923276c#rd")
 win.On.OpenLinkButton.Clicked = on_open_link_button_clicked
+
+def on_openai_preview_button_clicked(ev):
+    webbrowser.open("https://openai.fm")
+win.On.OpenAIPreviewButton.Clicked = on_openai_preview_button_clicked
+
 
 def on_minimax_register_link_button_clicked(ev):
     if minimax_items["intlCheckBox"].Checked:
