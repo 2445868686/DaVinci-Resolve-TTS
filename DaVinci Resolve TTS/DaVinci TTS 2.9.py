@@ -1026,7 +1026,7 @@ def return_voice_name(name):
 
 
 # 填充ComboBox
-minimax_models = ["speech-01-turbo", "speech-01-240228","speech-01-turbo-240228","speech-01-hd"]
+minimax_models = ["speech-02-hd-preview","speech-02-turbo-preview","speech-01-hd","speech-01-turbo", "speech-01-240228","speech-01-turbo-240228",]
 for model in minimax_models:
     items["minimaxModelCombo"].AddItem(model)
 
@@ -1105,7 +1105,7 @@ items["OpenAIFormatCombo"].AddItem("wav")
 # 模型选项切换逻辑
 def on_minimax_model_combo_changed(event):
     selected_model = items["minimaxModelCombo"].CurrentText
-    if selected_model not in ["speech-01-turbo", "speech-01-hd"]:
+    if selected_model in [ "speech-01-240228","speech-01-turbo-240228",]:
         items["minimaxEmotionCombo"].CurrentIndex = 0
         items["minimaxEmotionCombo"].Enabled = False  # 启用情绪选择
     else:
