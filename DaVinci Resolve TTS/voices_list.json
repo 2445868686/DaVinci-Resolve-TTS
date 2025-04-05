@@ -6413,68 +6413,257 @@
         ]
     },
     "minimax_voices": [
-    { "cn": "青涩青年", "en": "male-qn-qingse" },
-    { "cn": "精英青年", "en": "male-qn-jingying" },
-    { "cn": "霸道青年", "en": "male-qn-badao" },
-    { "cn": "青年大学生", "en": "male-qn-daxuesheng" },
-    { "cn": "少女", "en": "female-shaonv" },
-    { "cn": "御姐", "en": "female-yujie" },
-    { "cn": "成熟女性", "en": "female-chengshu" },
-    { "cn": "甜美女性", "en": "female-tianmei" },
-    { "cn": "男性主持人", "en": "presenter_male" },
-    { "cn": "女性主持人", "en": "presenter_female" },
-    { "cn": "男性有声书1", "en": "audiobook_male_1" },
-    { "cn": "男性有声书2", "en": "audiobook_male_2" },
-    { "cn": "女性有声书1", "en": "audiobook_female_1" },
-    { "cn": "女性有声书2", "en": "audiobook_female_2" },
-    { "cn": "青涩青年-beta", "en": "male-qn-qingse-jingpin" },
-    { "cn": "精英青年-beta", "en": "male-qn-jingying-jingpin" },
-    { "cn": "霸道青年-beta", "en": "male-qn-badao-jingpin" },
-    { "cn": "青年大学生-beta", "en": "male-qn-daxuesheng-jingpin" },
-    { "cn": "少女-beta", "en": "female-shaonv-jingpin" },
-    { "cn": "御姐-beta", "en": "female-yujie-jingpin" },
-    { "cn": "成熟女性-beta", "en": "female-chengshu-jingpin" },
-    { "cn": "甜美女性-beta", "en": "female-tianmei-jingpin" },
-    { "cn": "聪明男童", "en": "clever_boy" },
-    { "cn": "可爱男童", "en": "cute_boy" },
-    { "cn": "萌萌女童", "en": "lovely_girl" },
-    { "cn": "卡通猪小琪", "en": "cartoon_pig" },
-    { "cn": "病娇弟弟", "en": "bingjiao_didi" },
-    { "cn": "俊朗男友", "en": "junlang_nanyou" },
-    { "cn": "纯真学弟", "en": "chunzhen_xuedi" },
-    { "cn": "冷淡学长", "en": "lengdan_xiongzhang" },
-    { "cn": "霸道少爷", "en": "badao_shaoye" },
-    { "cn": "甜心小玲", "en": "tianxin_xiaoling" },
-    { "cn": "俏皮萌妹", "en": "qiaopi_mengmei" },
-    { "cn": "妩媚御姐", "en": "wumei_yujie" },
-    { "cn": "嗲嗲学妹", "en": "diadia_xuemei" },
-    { "cn": "淡雅学姐", "en": "danya_xuejie" },
-    { "cn": "Santa Claus", "en": "Santa_Claus" },
-    { "cn": "Grinch", "en": "Grinch" },
-    { "cn": "Rudolph", "en": "Rudolph" },
-    { "cn": "Arnold", "en": "Arnold" },
-    { "cn": "Charming Santa", "en": "Charming_Santa" },
-    { "cn": "Charming Lady", "en": "Charming_Lady" },
-    { "cn": "Sweet Girl", "en": "Sweet_Girl" },
-    { "cn": "Cute Elf", "en": "Cute_Elf" },
-    { "cn": "Attractive Girl", "en": "Attractive_Girl" },
-    { "cn": "Serene Woman", "en": "Serene_Woman" },
-    { "cn": "Wise Woman（海外）", "en": "Wise_Woman" },
-    { "cn": "Friendly Person（海外）", "en": "Friendly_Person" },
-    { "cn": "Inspirational Girl（海外）", "en": "Inspirational_girl" },
-    { "cn": "Deep Voice Man（海外）", "en": "Deep_Voice_Man" },
-    { "cn": "Calm Woman（海外）", "en": "Calm_Woman" },
-    { "cn": "Casual Guy（海外）", "en": "Casual_Guy" },
-    { "cn": "Lively Girl（海外）", "en": "Lively_Girl" },
-    { "cn": "Patient Man（海外）", "en": "Patient_Man" },
-    { "cn": "Young Knight（海外）", "en": "Young_Knight" },
-    { "cn": "Determined Man（海外）", "en": "Determined_Man" },
-    { "cn": "Lovely Girl（海外）", "en": "Lovely_Girl" },
-    { "cn": "Decent Boy（海外）", "en": "Decent_Boy" },
-    { "cn": "Imposing Manner（海外）", "en": "Imposing_Manner" },
-    { "cn": "Elegant Man（海外）", "en": "Elegant_Man" },
-    { "cn": "Abbess（海外）", "en": "Abbess" },
-    { "cn": "Sweet Girl 2（海外）", "en": "Sweet_Girl_2" },
-    { "cn": "Exuberant Girl（海外）", "en": "Exuberant_Girl" }
-  ]
+        {
+            "voice_name": "青涩青年",
+            "voice_id": "male-qn-qingse"
+        },
+        {
+            "voice_name": "精英青年",
+            "voice_id": "male-qn-jingying"
+        },
+        {
+            "voice_name": "霸道青年",
+            "voice_id": "male-qn-badao"
+        },
+        {
+            "voice_name": "青年大学生",
+            "voice_id": "male-qn-daxuesheng"
+        },
+        {
+            "voice_name": "少女",
+            "voice_id": "female-shaonv"
+        },
+        {
+            "voice_name": "御姐",
+            "voice_id": "female-yujie"
+        },
+        {
+            "voice_name": "成熟女性",
+            "voice_id": "female-chengshu"
+        },
+        {
+            "voice_name": "甜美女性",
+            "voice_id": "female-tianmei"
+        },
+        {
+            "voice_name": "男性主持人",
+            "voice_id": "presenter_male"
+        },
+        {
+            "voice_name": "女性主持人",
+            "voice_id": "presenter_female"
+        },
+        {
+            "voice_name": "男性有声书1",
+            "voice_id": "audiobook_male_1"
+        },
+        {
+            "voice_name": "男性有声书2",
+            "voice_id": "audiobook_male_2"
+        },
+        {
+            "voice_name": "女性有声书1",
+            "voice_id": "audiobook_female_1"
+        },
+        {
+            "voice_name": "女性有声书2",
+            "voice_id": "audiobook_female_2"
+        },
+        {
+            "voice_name": "青涩青年-beta",
+            "voice_id": "male-qn-qingse-jingpin"
+        },
+        {
+            "voice_name": "精英青年-beta",
+            "voice_id": "male-qn-jingying-jingpin"
+        },
+        {
+            "voice_name": "霸道青年-beta",
+            "voice_id": "male-qn-badao-jingpin"
+        },
+        {
+            "voice_name": "青年大学生-beta",
+            "voice_id": "male-qn-daxuesheng-jingpin"
+        },
+        {
+            "voice_name": "少女-beta",
+            "voice_id": "female-shaonv-jingpin"
+        },
+        {
+            "voice_name": "御姐-beta",
+            "voice_id": "female-yujie-jingpin"
+        },
+        {
+            "voice_name": "成熟女性-beta",
+            "voice_id": "female-chengshu-jingpin"
+        },
+        {
+            "voice_name": "甜美女性-beta",
+            "voice_id": "female-tianmei-jingpin"
+        },
+        {
+            "voice_name": "聪明男童",
+            "voice_id": "clever_boy"
+        },
+        {
+            "voice_name": "可爱男童",
+            "voice_id": "cute_boy"
+        },
+        {
+            "voice_name": "萌萌女童",
+            "voice_id": "lovely_girl"
+        },
+        {
+            "voice_name": "卡通猪小琪",
+            "voice_id": "cartoon_pig"
+        },
+        {
+            "voice_name": "病娇弟弟",
+            "voice_id": "bingjiao_didi"
+        },
+        {
+            "voice_name": "俊朗男友",
+            "voice_id": "junlang_nanyou"
+        },
+        {
+            "voice_name": "纯真学弟",
+            "voice_id": "chunzhen_xuedi"
+        },
+        {
+            "voice_name": "冷淡学长",
+            "voice_id": "lengdan_xiongzhang"
+        },
+        {
+            "voice_name": "霸道少爷",
+            "voice_id": "badao_shaoye"
+        },
+        {
+            "voice_name": "甜心小玲",
+            "voice_id": "tianxin_xiaoling"
+        },
+        {
+            "voice_name": "俏皮萌妹",
+            "voice_id": "qiaopi_mengmei"
+        },
+        {
+            "voice_name": "妩媚御姐",
+            "voice_id": "wumei_yujie"
+        },
+        {
+            "voice_name": "嗲嗲学妹",
+            "voice_id": "diadia_xuemei"
+        },
+        {
+            "voice_name": "淡雅学姐",
+            "voice_id": "danya_xuejie"
+        },
+        {
+            "voice_name": "Santa Claus",
+            "voice_id": "Santa_Claus"
+        },
+        {
+            "voice_name": "Grinch",
+            "voice_id": "Grinch"
+        },
+        {
+            "voice_name": "Rudolph",
+            "voice_id": "Rudolph"
+        },
+        {
+            "voice_name": "Arnold",
+            "voice_id": "Arnold"
+        },
+        {
+            "voice_name": "Charming Santa",
+            "voice_id": "Charming_Santa"
+        },
+        {
+            "voice_name": "Charming Lady",
+            "voice_id": "Charming_Lady"
+        },
+        {
+            "voice_name": "Sweet Girl",
+            "voice_id": "Sweet_Girl"
+        },
+        {
+            "voice_name": "Cute Elf",
+            "voice_id": "Cute_Elf"
+        },
+        {
+            "voice_name": "Attractive Girl",
+            "voice_id": "Attractive_Girl"
+        },
+        {
+            "voice_name": "Serene Woman",
+            "voice_id": "Serene_Woman"
+        },
+        {
+            "voice_name": "Wise Woman（海外）",
+            "voice_id": "Wise_Woman"
+        },
+        {
+            "voice_name": "Friendly Person（海外）",
+            "voice_id": "Friendly_Person"
+        },
+        {
+            "voice_name": "Inspirational Girl（海外）",
+            "voice_id": "Inspirational_girl"
+        },
+        {
+            "voice_name": "Deep Voice Man（海外）",
+            "voice_id": "Deep_Voice_Man"
+        },
+        {
+            "voice_name": "Calm Woman（海外）",
+            "voice_id": "Calm_Woman"
+        },
+        {
+            "voice_name": "Casual Guy（海外）",
+            "voice_id": "Casual_Guy"
+        },
+        {
+            "voice_name": "Lively Girl（海外）",
+            "voice_id": "Lively_Girl"
+        },
+        {
+            "voice_name": "Patient Man（海外）",
+            "voice_id": "Patient_Man"
+        },
+        {
+            "voice_name": "Young Knight（海外）",
+            "voice_id": "Young_Knight"
+        },
+        {
+            "voice_name": "Determined Man（海外）",
+            "voice_id": "Determined_Man"
+        },
+        {
+            "voice_name": "Lovely Girl（海外）",
+            "voice_id": "Lovely_Girl"
+        },
+        {
+            "voice_name": "Decent Boy（海外）",
+            "voice_id": "Decent_Boy"
+        },
+        {
+            "voice_name": "Imposing Manner（海外）",
+            "voice_id": "Imposing_Manner"
+        },
+        {
+            "voice_name": "Elegant Man（海外）",
+            "voice_id": "Elegant_Man"
+        },
+        {
+            "voice_name": "Abbess（海外）",
+            "voice_id": "Abbess"
+        },
+        {
+            "voice_name": "Sweet Girl 2（海外）",
+            "voice_id": "Sweet_Girl_2"
+        },
+        {
+            "voice_name": "Exuberant Girl（海外）",
+            "voice_id": "Exuberant_Girl"
+        }
+    ]
 }
