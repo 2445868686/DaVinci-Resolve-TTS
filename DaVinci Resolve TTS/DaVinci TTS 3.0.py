@@ -35,6 +35,13 @@ infomsg_cn = """
     </style>
 </head>
 <body>
+    <h3>更新[3.0] 2025-04-05</h3>
+        <li>-海螺语音</li>
+        <ul>
+            <li>新增speech-02-hd，全新的HD模型，拥有更出色的韵律和稳定性，复刻相似度和音质表现突出！</li> 
+            <li>新增speech-02-turbo，全新的Turbo模型，拥有更出色的韵律和稳定性，小语种能力加强，性能表现出色！</li> 
+            <li>可添加自定义克隆音色（前往<a href="https://www.minimaxi.com/">MINIMAX</a>获取你的克隆ID）！</li> 
+        </ul>   
     <h3>更新[2.9] 2025-03-23</h3>
         <li>-新增OpenAI TTS语音模型</li>
 
@@ -154,6 +161,13 @@ infomsg_en = """
     </style>
 </head>
 <body>
+<h3>Update [3.0] 2025-04-05</h3> 
+<li>-Minimax TTS</li> 
+    <ul> 
+        <li>New speech-02-hd: The brand new HD model boasts superior rhythm and stability, with outstanding performance in replication similarity and sound quality!</li> 
+        <li>New speech-02-turbo: The brand new Turbo model boasts superior rhythm and stability, with enhanced multilingual capabilities and excellent performance!</li>
+        <li>You can add a custom cloned voice (go to <a href="https://www.minimaxi.com/">MINIMAX</a> to get your clone ID)!</li>
+    </ul>
 <h3>Update [2.9] 2025-03-23</h3>
      <li>-Added OpenAI TTS voice model</li>
     <h3>Update [2.8] 2025-03-16</h3>
@@ -286,7 +300,10 @@ class STATUS_MESSAGES:
     unsupported_audio   = ("Unsupported audio format selected.", "不支持的音频格式.")
     create_timeline     = ("Please create a timeline first!", "请先创建时间线！")
     reset_status        = ("", "")
-
+    voices_list         = ("The voices_list.json file is missing.", "缺少voices_list.json文件.")
+    clone_voices_error  = ("It already exists and cannot be added again!", "已存在，无法重复添加！")
+    clone_voices_error1  = ("The parameters were filled in incorrectly!", "参数填写错误！")
+    
 def check_or_create_file(file_path):
     if os.path.exists(file_path):
         pass
@@ -463,13 +480,13 @@ ui = fusion.UIManager
 dispatcher = bmd.UIDispatcher(ui)
 screen_width = 1920
 screen_height = 1080
-window_width = 800
+window_width = 850
 window_height = 400
 x_center = (screen_width - window_width) // 2
 y_center = (screen_height - window_height) // 2
 win = dispatcher.AddWindow({
     "ID": "MainWin", 
-    "WindowTitle": "DaVinci TTS 2.9", 
+    "WindowTitle": "DaVinci TTS 3.0", 
     "Geometry": [x_center, y_center, window_width, window_height],
     "Spacing": 10,
     "StyleSheet": """
@@ -569,9 +586,10 @@ win = dispatcher.AddWindow({
                                 ui.ComboBox({"ID": "minimaxLanguageCombo", "Text": "选择语言"})
                             ]),
                             ui.HGroup({}, [
-                                ui.Label({"ID": "minimaxVoiceLabel","Text": "人声:", "Weight": 0}),
+                                ui.Label({"ID": "minimaxVoiceLabel","Text": "音色:", "Weight": 0}),
                                 ui.ComboBox({"ID": "minimaxVoiceCombo", "Text": "选择人声"}),
                                 ui.Button({"ID": "minimaxPreviewButton", "Text": "试听"}),
+                                ui.Button({"ID": "ShowMiniMaxClone", "Text": "添加克隆音色"}),
                             ]),
                             ui.HGroup({}, [
                                 ui.Label({"ID": "minimaxEmotionLabel","Text": "情绪:", "Weight": 0}),
@@ -622,7 +640,7 @@ win = dispatcher.AddWindow({
                                 ui.ComboBox({"ID": "OpenAIModelCombo", "Text": "选择模型"}),
                             ]),
                             ui.HGroup({}, [
-                                ui.Label({"ID": "OpenAIVoiceLabel","Text": "人声:", "Weight": 0}),
+                                ui.Label({"ID": "OpenAIVoiceLabel","Text": "音色:", "Weight": 0}),
                                 ui.ComboBox({"ID": "OpenAIVoiceCombo", "Text": "选择人声"}),
                                 ui.Label({"ID": "OpenAIPresetLabel","Text": "预设:", "Weight": 0}),
                                 ui.ComboBox({"ID": "OpenAIPresetCombo", "Text": "预设"}),
@@ -807,6 +825,43 @@ minimax_config_window = dispatcher.AddWindow(
     ]
 )
 
+# minimax配置窗口
+minimax_clone_window = dispatcher.AddWindow(
+    {
+        "ID": "MiniMaxCloneWin",
+        "WindowTitle": "MiniMax Clone",
+        "Geometry": [900, 400, 400, 200],
+        "Hidden": True,
+        "StyleSheet": """
+        * {
+            font-size: 14px; /* 全局字体大小 */
+        }
+    """
+    },
+    [
+        ui.VGroup(
+            [
+                ui.Label({"ID": "minimaxCloneLabel","Text": "MiniMax 克隆音色", "Alignment": {"AlignHCenter": True, "AlignVCenter": True}}),
+                ui.HGroup({"Weight": 1}, [
+                    ui.Label({"ID": "minimaxCloneVoiceNameLabel","Text": "Name", "Weight": 0.2}),
+                    ui.LineEdit({"ID": "minimaxCloneVoiceName", "Weight": 0.8})
+                ]),
+                ui.HGroup({"Weight": 1}, [
+                    ui.Label({"ID": "minimaxCloneVoiceIDLabel","Text": "ID", "Weight": 0.2}),
+                    ui.LineEdit({"ID": "minimaxCloneVoiceID", "Weight": 0.8}),
+                ]),
+
+                #ui.CheckBox({"ID": "NeedNoiseReduction", "Text": "是否开启降噪", "Checked": False, "Alignment": {"AlignLeft": True}, "Weight": 0.1}),
+                ui.HGroup({"Weight": 1}, [
+                    ui.Button({"ID": "MiniMaxCloneConfirm", "Text": "添加","Weight": 1}),
+                    ui.Button({"ID": "MiniMaxCloneCancel", "Text": "取消","Weight": 1}),
+                ]),
+                
+            ]
+        )
+    ]
+)
+
 translations = {
     "cn": {
         "Tabs": ["微软语音", "海螺语音", "OpenAI 语音","配置"],
@@ -821,9 +876,10 @@ translations = {
         "minimaxModelLabel": "模型",
         "OpenAIModelLabel": "模型",
         "minimaxLanguageLabel": "语言",
-        "minimaxVoiceLabel": "人声",
-        "OpenAIVoiceLabel": "人声",
+        "minimaxVoiceLabel": "音色",
+        "OpenAIVoiceLabel": "音色",
         "OpenAIPresetLabel": "预设",
+        "OpenAIPreviewButton": "试听",
         "OpenAIInstructionLabel": "指令",
         "minimaxPreviewButton":"试听",
         "LanguageLabel": "语言",
@@ -858,6 +914,7 @@ translations = {
         "ShowAzure":"配置",
         "ShowMiniMax": "配置",
         "ShowOpenAI": "配置",
+        "ShowMiniMaxClone": "添加克隆音色",
         "OpenLinkButton":"关注公众号：游艺所\n\n>>>点击查看更多信息<<<\n\n© 2025, Copyright by HB.",
         "infoTxt":infomsg_cn,
         "AzureLabel":"填写Azure API信息",
@@ -868,9 +925,14 @@ translations = {
         "AzureConfirm":"确定",
         "AzureRegisterButton":"注册",
         "minimaxLabel":"填写MiniMax API信息",
+        "minimaxCloneLabel":"添加 海螺AI 克隆音色",
+        "minimaxCloneVoiceNameLabel":"音色名字",
+        "minimaxCloneVoiceIDLabel":"音色 ID",
         "minimaxApiKeyLabel":"密钥",
         "intlCheckBox": "海外",
         "MiniMaxConfirm":"确定",
+        "MiniMaxCloneConfirm":"添加",
+        "MiniMaxCloneCancel":"取消",
         "minimaxRegisterButton":"注册",
         "OpenAILabel":"填写OpenAI API信息",
         "OpenAIBaseURLLabel":"Base URL",
@@ -896,6 +958,7 @@ translations = {
         "minimaxVoiceLabel": "Voice",
         "OpenAIVoiceLabel": "Voice",
         "OpenAIPresetLabel": "Preset",
+        "OpenAIPreviewButton": "Preview",
         "OpenAIInstructionLabel": "Instruction",
         "minimaxPreviewButton":"Preview",
         "LanguageLabel": "Language",
@@ -930,6 +993,7 @@ translations = {
         "ShowAzure":"Config",
         "ShowMiniMax": "Config",
         "ShowOpenAI": "Config",
+        "ShowMiniMaxClone": "Add Clone Voice",
         "OpenLinkButton":"😊Buy Me A Coffe😊\n\n© 2025, Copyright by HB.",
         "infoTxt":infomsg_en,
         "AzureLabel":"Azure API",
@@ -940,9 +1004,14 @@ translations = {
         "AzureConfirm":"OK",
         "AzureRegisterButton":"Register",
         "minimaxLabel":"MiniMax API",
+        "minimaxCloneLabel":"Add MiniMax Clone Voice",
+        "minimaxCloneVoiceNameLabel":"Voice Name",
+        "minimaxCloneVoiceIDLabel":"Voice ID",
         "minimaxApiKeyLabel":"Key",
         "intlCheckBox": "intl",
         "MiniMaxConfirm":"OK",
+        "MiniMaxCloneConfirm":"Add",
+        "MiniMaxCloneCancel":"Cancel",
         "minimaxRegisterButton":"Register",
         "OpenAILabel":"OpenAI API",
         "OpenAIBaseURLLabel":"Base URL",
@@ -955,6 +1024,7 @@ items = win.GetItems()
 azure_items = azure_config_window.GetItems()
 minimax_items = minimax_config_window.GetItems()
 openai_items = openai_config_window.GetItems()
+minimax_clone_items = minimax_clone_window.GetItems()
 items["StatusLabel"].Text = ""
 items["MyStack"].CurrentIndex = 0
 
@@ -988,18 +1058,65 @@ volume = None
 style_degree = None
 stream = None
 
+def show_warning_message(status_tuple):
+    use_english = items["LangEnCheckBox"].Checked
+    # 元组索引 0 为英文，1 为中文
+    message = status_tuple[0] if use_english else status_tuple[1]
+    msgbox = dispatcher.AddWindow(
+        {
+            "ID": 'msg',
+            "WindowTitle": 'Warning',
+            "Geometry": [750, 400, 350, 100],
+            "Spacing": 10,
+        },
+        [
+            ui.VGroup(
+                [
+                    ui.Label({"ID": 'WarningLabel', "Text": message}),
+                    ui.HGroup(
+                        {
+                            "Weight": 0,
+                        },
+                        [
+                            ui.Button({"ID": 'OkButton', "Text": 'OK'}),
+                        ]
+                    ),
+                ]
+            ),
+        ]
+    )
+
+    def on_ok_button_clicked(ev):
+        dispatcher.ExitLoop()
+    msgbox.On.OkButton.Clicked = on_ok_button_clicked
+
+    msgbox.Show()
+    dispatcher.RunLoop()
+    msgbox.Hide()
+    
 # 加载Voice
 voice_file = os.path.join(script_path, 'voices_list.json')
+if not os.path.exists(voice_file):
+    show_warning_message(STATUS_MESSAGES.voices_list)
 with open(voice_file, "r", encoding="utf-8") as file:
     voices_data = json.load(file)
+
 azure_voices = voices_data.get("azure_voice", {})
 edgeTTS_voices = voices_data.get("edge_voice", {})
 openai_voices = voices_data.get("openai_voice", {}).get("voices", [])
 minimax_voices = voices_data.get("minimax_voices", [])
+minimax_clone_voices = voices_data.get("minimax_clone_voices", [])
 
 preset_file = os.path.join(script_path, 'instruction.json')
-with open(preset_file, "r", encoding="utf-8") as file:
-    preset_data = json.load(file)
+if not os.path.exists(preset_file):
+    preset_data = {
+        "Custom": {
+            "Description": ""
+        }
+    }
+else:
+    with open(preset_file, "r", encoding="utf-8") as file:
+        preset_data = json.load(file)
 
 for preset_name in preset_data:
     items["OpenAIPresetCombo"].AddItem(preset_name)
@@ -1026,7 +1143,7 @@ def return_voice_name(name):
 
 
 # 填充ComboBox
-minimax_models = ["speech-02-hd-preview","speech-02-turbo-preview","speech-01-hd","speech-01-turbo", "speech-01-240228","speech-01-turbo-240228",]
+minimax_models = ["speech-02-hd","speech-02-turbo","speech-01-hd","speech-01-turbo", "speech-01-240228","speech-01-turbo-240228",]
 for model in minimax_models:
     items["minimaxModelCombo"].AddItem(model)
 
@@ -1038,14 +1155,22 @@ for model in openai_models:
 # 将声音选项添加到 minimaxVoiceCombo
 for voice in openai_voices:
     items["OpenAIVoiceCombo"].AddItem(voice)
+  
+if minimax_clone_voices:
+    checked = items["LangEnCheckBox"].Checked
+    for voice in minimax_clone_voices:
+        # 三元表达式：选中时添加 voice_name，否则添加 voice_id
+        items["minimaxVoiceCombo"].AddItem(
+            voice["voice_name"] if checked else voice["voice_id"]
+        )
 
 for voice  in minimax_voices:
     if items["LangEnCheckBox"].Checked:
-        items["minimaxVoiceCombo"].AddItem(voice["en"])  # 选中时添加英文
+        items["minimaxVoiceCombo"].AddItem(voice["voice_name"])  # 选中时添加英文
     else:
-        items["minimaxVoiceCombo"].AddItem(voice["cn"]) # 未选中时添加中文
-   
+        items["minimaxVoiceCombo"].AddItem(voice["voice_id"]) # 未选中时添加中文
 
+        
 minimax_language = [
     ("自动", "auto"),
     ("中文", "Chinese"),
@@ -1360,32 +1485,37 @@ def switch_language(lang):
             minimax_items[item_id].Text = text_value
         elif item_id in openai_items:    
             openai_items[item_id].Text = text_value
+        elif item_id in minimax_clone_items:    
+            minimax_clone_items[item_id].Text = text_value
         else:
             print(f"[Warning] items 中不存在 ID 为 {item_id} 的控件，无法设置文本！")
 
+    # 缓存复选框状态
+    checked = items["LangEnCheckBox"].Checked
+
+    # 名称类型
     for cn, en in NameTypeMapping.items():
-        if items["LangEnCheckBox"].Checked:
-            items["NameTypeCombo"].AddItem(en)  # 选中时添加英文
-        else:
-            items["NameTypeCombo"].AddItem(cn)  # 未选中时添加中文
+        items["NameTypeCombo"].AddItem(en if checked else cn)
 
+    # 情感列表
     for cn, en in emotions:
-        if items["LangEnCheckBox"].Checked:
-            items["minimaxEmotionCombo"].AddItem(en)  # 选中时添加英文
-        else:
-            items["minimaxEmotionCombo"].AddItem(cn)  # 未选中时添加中文
-    
-    for voice  in minimax_voices:
-        if items["LangEnCheckBox"].Checked:
-            items["minimaxVoiceCombo"].AddItem(voice["en"])  # 选中时添加英文
-        else:
-            items["minimaxVoiceCombo"].AddItem(voice["cn"]) # 未选中时添加中文 
+        items["minimaxEmotionCombo"].AddItem(en if checked else cn)
 
+    # 语音列表
+    for voice in minimax_clone_voices:
+        items["minimaxVoiceCombo"].AddItem(
+            voice["voice_id"] if checked else voice["voice_name"]
+        )
+
+    # 语音列表
+    for voice in minimax_voices:
+        items["minimaxVoiceCombo"].AddItem(
+            voice["voice_id"] if checked else voice["voice_name"]
+        )
+
+    # 语言列表
     for cn, en in minimax_language:
-        if items["LangEnCheckBox"].Checked:
-            items["minimaxLanguageCombo"].AddItem(en)  
-        else:
-            items["minimaxLanguageCombo"].AddItem(cn)     
+        items["minimaxLanguageCombo"].AddItem(en if checked else cn) 
 
 def on_cn_checkbox_clicked(ev):
     items["LangEnCheckBox"].Checked = not items["LangCnCheckBox"].Checked
@@ -2272,8 +2402,8 @@ def on_minimax_preview_button_click(ev):
         voice_name = items["minimaxVoiceCombo"].CurrentText  # 目标音色
 
         voice_id = next(
-            (v["cn"] for v in minimax_voices 
-            if voice_name == v["cn"] or voice_name == v["en"]),
+            (v["voice_name"] for v in minimax_voices 
+            if voice_name == v["voice_name"] or voice_name == v["voice_id"]),
             ""
         )
 
@@ -2308,10 +2438,16 @@ def process_minimax_request(text_func, timeline_func):
     voice_name = items["minimaxVoiceCombo"].CurrentText  # 目标音色
 
     voice_id = next(
-        (v["en"] for v in minimax_voices 
-        if voice_name == v["cn"] or voice_name == v["en"]),
+        (v["voice_id"] for v in minimax_voices 
+        if voice_name == v["voice_name"] or voice_name == v["voice_id"]),
         ""
     )
+    if not voice_id:
+        voice_id = next(
+            (v["voice_id"] for v in minimax_clone_voices 
+            if voice_name == v["voice_name"] or voice_name == v["voice_id"]),
+            ""
+        )
 
     lang_name = items["minimaxLanguageCombo"].CurrentText
     lang_id = next((en for cn, en in minimax_language if lang_name in (cn, en)), "")
@@ -2624,42 +2760,6 @@ def on_minimax_break_button_clicked(ev):
 
 win.On.minimaxBreakButton.Clicked = on_minimax_break_button_clicked
 
-def show_warning_message(status_tuple):
-    use_english = items["LangEnCheckBox"].Checked
-    # 元组索引 0 为英文，1 为中文
-    message = status_tuple[0] if use_english else status_tuple[1]
-    msgbox = dispatcher.AddWindow(
-        {
-            "ID": 'msg',
-            "WindowTitle": 'Warning',
-            "Geometry": [750, 400, 350, 100],
-            "Spacing": 10,
-        },
-        [
-            ui.VGroup(
-                [
-                    ui.Label({"ID": 'WarningLabel', "Text": message}),
-                    ui.HGroup(
-                        {
-                            "Weight": 0,
-                        },
-                        [
-                            ui.Button({"ID": 'OkButton', "Text": 'OK'}),
-                        ]
-                    ),
-                ]
-            ),
-        ]
-    )
-
-    def on_ok_button_clicked(ev):
-        dispatcher.ExitLoop()
-    msgbox.On.OkButton.Clicked = on_ok_button_clicked
-
-    msgbox.Show()
-    dispatcher.RunLoop()
-    msgbox.Hide()
-    
 def on_alphabet_button_clicked(ev):
     items["AzureTxt"].Copy()
     from pypinyin import pinyin, Style
@@ -2878,39 +2978,102 @@ def on_show_minimax(ev):
     minimax_config_window.Show()
 win.On.ShowMiniMax.Clicked = on_show_minimax
 
+def on_show_minimax_clone(ev):
+    minimax_clone_window.Show()
+win.On.ShowMiniMaxClone.Clicked = on_show_minimax_clone
+
 def on_show_openai(ev):
     openai_config_window.Show()
 win.On.ShowOpenAI.Clicked = on_show_openai
 
 # Azure配置窗口按钮事件
-def on_azure_confirm(ev):
+def on_azure_close(ev):
     print("Azure API 配置完成")
     azure_config_window.Hide()
-azure_config_window.On.AzureConfirm.Clicked = on_azure_confirm
-
-def on_azure_confirm_close(ev):
-    azure_config_window.Hide()
-azure_config_window.On.AzureConfigWin.Close = on_azure_confirm_close
+azure_config_window.On.AzureConfirm.Clicked = on_azure_close
+azure_config_window.On.AzureConfigWin.Close = on_azure_close
 
 # MiniMax配置窗口按钮事件
-def on_minimax_confirm(ev):
+def on_minimax_close(ev):
     print("MiniMax API 配置完成")
     minimax_config_window.Hide()
-minimax_config_window.On.MiniMaxConfirm.Clicked = on_minimax_confirm
+minimax_config_window.On.MiniMaxConfirm.Clicked = on_minimax_close
+minimax_config_window.On.MiniMaxConfigWin.Close = on_minimax_close
 
-def on_minimax_confirm_close(ev):
-    minimax_config_window.Hide()
-minimax_config_window.On.MiniMaxConfigWin.Close = on_minimax_confirm_close
+def on_minimax_clone_confirm(ev):
+    global minimax_clone_voices  # 声明我们要更新的全局变量
+
+    # 1. 读文件
+    try:
+        with open(voice_file, 'r', encoding='utf-8') as file:
+            try:
+                data = json.load(file)
+            except json.JSONDecodeError:
+                data = {}
+    except IOError:
+        raise Exception(f"Cannot read file: {voice_file}")
+    
+    # 确保 key 存在
+    if "minimax_clone_voices" not in data:
+        data["minimax_clone_voices"] = []
+
+    # 2. 读 UI 输入并校验
+    voice_name = minimax_clone_items["minimaxCloneVoiceName"].Text.strip()
+    voice_id   = minimax_clone_items["minimaxCloneVoiceID"].Text.strip()
+    if not voice_name or not voice_id:
+        show_warning_message(STATUS_MESSAGES.clone_voices_error1)
+        return
+
+    # 3. 检查重复
+    exists = any(
+        v["voice_name"] == voice_name or v["voice_id"] == voice_id
+        for v in data["minimax_clone_voices"]
+    )
+    if exists:
+        show_warning_message(STATUS_MESSAGES.clone_voices_error)
+        return
+
+    # 4. 插入新条目到 data 列表开头
+    new_voice = {"voice_name": voice_name, "voice_id": voice_id}
+    data["minimax_clone_voices"].insert(0, new_voice)
+
+    # 5. 更新全局变量
+    minimax_clone_voices = data["minimax_clone_voices"]
+
+    # 6. 刷新下拉框
+    items["minimaxVoiceCombo"].Clear()
+    checked = items["LangEnCheckBox"].Checked
+    for voice in minimax_clone_voices:
+        items["minimaxVoiceCombo"].AddItem(
+            voice["voice_id"] if checked else voice["voice_name"]
+        )
+    for voice in minimax_voices:
+        items["minimaxVoiceCombo"].AddItem(
+            voice["voice_id"] if checked else voice["voice_name"]
+        )
+
+    # 7. 写回文件
+    try:
+        with open(voice_file, 'w', encoding='utf-8') as file:
+            json.dump(data, file, ensure_ascii=False, indent=4)
+    except IOError:
+        raise Exception(f"Cannot write to file: {voice_file}")
+
+
+minimax_clone_window.On.MiniMaxCloneConfirm.Clicked = on_minimax_clone_confirm
+
+
+def on_minimax_clone_close(ev):
+    minimax_clone_window.Hide()
+minimax_clone_window.On.MiniMaxCloneWin.Close = on_minimax_clone_close
+minimax_clone_window.On.MiniMaxCloneCancel.Clicked = on_minimax_clone_close
 
 # OpenAI配置窗口按钮事件
-def on_openai_confirm(ev):
+def on_openai_close(ev):
     print("OpenAI API 配置完成")
     openai_config_window.Hide()
-openai_config_window.On.OpenAIConfirm.Clicked = on_openai_confirm
-
-def on_openai_confirm_close(ev):
-    openai_config_window.Hide()
-openai_config_window.On.OpenAIConfigWin.Close = on_openai_confirm_close
+openai_config_window.On.OpenAIConfirm.Clicked = on_openai_close
+openai_config_window.On.OpenAIConfigWin.Close = on_openai_close
 
 def on_close(ev):
     close_and_save(settings_file)
