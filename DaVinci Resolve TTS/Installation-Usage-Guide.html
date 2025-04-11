@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DaVinci Resolve TTS Plugin Guide</title>
+  <style>
+    /* Global Styles */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+      color: #555;
+    }
+    /* Fixed Sidebar Navigation */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 250px;
+      height: 100%;
+      background: #fff;
+      border-right: 1px solid #e0e0e0;
+      padding: 20px;
+      overflow-y: auto;
+      box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    }
+    .sidebar h2 {
+      font-size: 1.8em;
+      margin: 0 0 20px;
+      color: #333;
+      text-align: center;
+      border-bottom: 1px solid #e0e0e0;
+      padding-bottom: 10px;
+    }
+    .sidebar ul {
+      list-style: none;
+      padding: 0;
+    }
+    .sidebar li {
+      margin: 10px 0;
+      font-size: 0.95em;
+    }
+    .sidebar li ul {
+      margin-top: 5px;
+      margin-left: 15px;
+    }
+    .sidebar a {
+      text-decoration: none;
+      color: #007BFF;
+      transition: color 0.3s;
+    }
+    .sidebar a:hover {
+      color: #0056b3;
+    }
+    /* Main Content: ensure left margin so as not to be overlapped by sidebar */
+    .content {
+      margin-left: 270px; /* Sidebar width 250px + 20px */
+      padding: 40px;
+    }
+    /* Card-style Containers */
+    .container {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      padding: 30px;
+      margin-bottom: 40px;
+    }
+    header {
+      text-align: center;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #e0e0e0;
+      margin-bottom: 30px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 2em;
+      color: #333;
+    }
+    h2 {
+      color: #007BFF;
+      margin-top: 30px;
+      border-left: 4px solid #007BFF;
+      padding-left: 10px;
+    }
+    h3 {
+      color: #333;
+      margin-top: 20px;
+    }
+    p, ul {
+      line-height: 1.8;
+      margin: 15px 0;
+    }
+    ul {
+      padding-left: 20px;
+    }
+    code {
+      background: #f9f9f9;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: Consolas, Monaco, 'Courier New', monospace;
+    }
+    pre {
+      background: #f9f9f9;
+      padding: 15px;
+      border-left: 5px solid #007BFF;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-family: Consolas, Monaco, 'Courier New', monospace;
+    }
+    a {
+      color: #007BFF;
+    }
+    footer {
+      text-align: center;
+      font-size: 0.9em;
+      color: #888;
+      margin-top: 40px;
+      border-top: 1px solid #e0e0e0;
+      padding-top: 20px;
+    }
+    /* Responsive Design: On small screens, cancel fixed sidebar */
+    @media (max-width: 768px) {
+      .sidebar {
+        position: relative;
+        width: 100%;
+        height: auto;
+        box-shadow: none;
+        border-right: none;
+        border-bottom: 1px solid #e0e0e0;
+      }
+      .content {
+        margin-left: 0;
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Fixed Sidebar Navigation -->
+  <nav class="sidebar">
+    <h2>Contents</h2>
+    <ul>
+      <li>
+        <strong>Installation Guide</strong>
+        <ul>
+          <li><a href="#step-1">Step 1: Check Python</a></li>
+          <li><a href="#step-2">Step 2: Move Plugin</a></li>
+          <li><a href="#step-3">Step 3: Install Speech SDK</a></li>
+        </ul>
+      </li>
+      <li>
+        <strong>Usage Guide</strong>
+        <ul>
+          <li>
+            <a href="#basic-features">Basic Features</a>
+            <ul>
+              <li><a href="#timeline-subs">Timeline Subs</a></li>
+              <li><a href="#read-textbox">Read Textbox</a></li>
+              <li><a href="#read-subs">Read Subs</a></li>
+              <li><a href="#break">Break</a></li>
+            </ul>
+          </li>
+          <li>
+            <a href="#azure-tts">Azure TTS</a>
+            <ul>
+              <li><a href="#azure-feature">Feature</a></li>
+              <li><a href="#azure-params">Parameters</a></li>
+            </ul>
+          </li>
+          <li>
+            <a href="#minimax-tts">MiniMax TTS</a>
+            <ul>
+              <li><a href="#minimax-feature">Feature</a></li>
+              <li><a href="#minimax-params">Parameters</a></li>
+            </ul>
+          </li>
+          <li>
+            <a href="#openai-tts">OpenAI TTS</a>
+            <ul>
+              <li><a href="#openai-params">Parameters</a></li>
+            </ul>
+          </li>
+          <li>
+            <a href="#configuration">Configuration</a>
+            <ul>
+              <li><a href="#save-path">Save Path</a></li>
+              <li><a href="#azure-api">Azure API Config</a></li>
+              <li><a href="#minimax-api">MiniMax API Config</a></li>
+              <li><a href="#openai-api">OpenAI API Config</a></li>
+            </ul>
+          </li>
+          <!-- 更新目录，添加视频教程入口 -->
+          <li><a href="#video-tutorial">Video Tutorial</a></li>
+        </ul>
+      </li>
+    </ul>
+  </nav>
+  
+  <!-- Main Content Area -->
+  <div class="content">
+    <!-- Installation Guide Section -->
+    <div class="container" id="install-guide">
+      <header>
+        <h1>DaVinci Resolve TTS Plugin Installation Guide</h1>
+      </header>
+      <section id="step-1">
+        <h2>Step 1: Check if Python is Installed in DaVinci Resolve</h2>
+        <p>
+          Click: <code>Workspace</code> ——&gt; <code>Console</code> ——&gt; <code>Py3</code>. If it is already installed, no window will pop up (proceed directly to <a href="#step-2">Step 2</a>).
+        </p>
+        <p>
+          If it is not installed, a "<strong>Python was not found</strong>" message will pop up. Follow the pop-up instructions to download and install it. After installation, proceed to <a href="#step-2">Step 2</a>!
+        </p>
+        <p><strong>Important for Windows users:</strong> During Python installation, make sure to check the "<span style="color: red;">Add Python to PATH</span>" option. If you forget this step, you may need to reinstall Python or manually add it to the system's environment variables.</p>
+      </section>
+      <section id="step-2">
+        <h2>Step 2: Move the DaVinci Resolve TTS Plugin</h2>
+        <p>Move the <code>DaVinci Resolve TTS</code> folder to the following location:</p>
+        <pre><code>Mac: 
+/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/Scripts/Edit 
+
+Win: 
+C:\ProgramData\Blackmagic Design\DaVinci Resolve\Fusion\Scripts\Edit</code></pre>
+      </section>
+      <section id="step-3">
+        <h2>Step 3: Run This Command in the Terminal to Install the Speech SDK</h2>
+        <h3>Mac: Open the Terminal and Enter the Following Command, Then Press Enter</h3>
+        <pre><code>pip install requests azure-cognitiveservices-speech edge_tts pypinyin</code></pre>
+        <h3>Win: Open cmd and Enter the Following Command, Then Press Enter</h3>
+        <pre><code>pip install requests azure-cognitiveservices-speech edge_tts pypinyin</code></pre>
+        <p>
+          Wait for the installation to complete. After that, you can open the plugin in DaVinci Resolve by going to <code>Workspace</code> ——&gt; <code>Scripts</code>.
+        </p>
+      </section>
+    </div>
+    
+    <!-- Usage Guide Section -->
+    <div class="container" id="usage-guide">
+      <header>
+        <h1>DaVinci Resolve TTS Plugin Usage Guide</h1>
+      </header>
+      <!-- Basic Features -->
+      <section id="basic-features">
+        <h2>Basic Features</h2>
+        <section id="timeline-subs">
+          <h3>Timeline Subs</h3>
+          <p>
+            Click <strong>Timeline Subs</strong> to fetch the subtitle content at the current playhead position and fill it into the text box!
+          </p>
+        </section>
+        <section id="read-textbox">
+          <h3>Read Textbox</h3>
+          <p>
+            Enter the text you want to convert to audio in the input box, then click <strong>Read Textbox</strong>. The audio will be synthesized and inserted at the playhead position on the <strong>first available empty audio track</strong> based on the audio's length to avoid overlap.
+          </p>
+        </section>
+        <section id="read-subs">
+          <h3>Read Subs</h3>
+          <p>
+            Move the playhead over the target subtitle block and click <strong>Read Subs</strong>. The subtitle will be synthesized into audio and inserted at the subtitle's start time on the <strong>first empty audio track that does not overlap with existing clips</strong>.
+          </p>
+        </section>
+        <section id="break">
+          <h3>Break</h3>
+          <p>
+            Set the desired pause duration between words (e.g., <code>800</code> ms), then click <strong>Break</strong> to insert the following tag in the text: <code>&lt;break time="800ms"/&gt;</code>.
+          </p>
+        </section>
+      </section>
+      
+      <!-- Azure TTS -->
+      <section id="azure-tts">
+        <h2>Azure TTS</h2>
+        <section id="azure-feature">
+          <h3>Feature</h3>
+          <p>
+            <strong>Pronunciation:</strong> Currently supported for <code>Chinese (Mandarin)</code> only. Select the target word, click <strong>Pronunciation</strong>, and manually adjust pronunciation using pinyin.
+          </p>
+        </section>
+        <section id="azure-params">
+          <h3>Parameters</h3>
+          <ul>
+            <li><strong>Language:</strong> Choose the language for speech synthesis (e.g., Chinese, English, Japanese).</li>
+            <li><strong>Type:</strong> Filter voices by type—Male, Female, Child, etc.</li>
+            <li><strong>Name:</strong> Select from 500+ available voices for synthesis.</li>
+            <li><strong>Multilingual:</strong> Enable multilingual voices (Multilingual series) to switch languages within one voice.</li>
+            <li><strong>Style:</strong> Set the tone of the voice, such as “News”, “Cheerful”, “Narration”, etc.</li>
+            <li><strong>Style Degree:</strong> Controls the intensity of the selected style. Range: 0.0 - 2.0, default is 1.0.</li>
+            <li><strong>Rate:</strong> Voice speed. Range: 0.0 - 3.0, default is 1.0.</li>
+            <li><strong>Pitch:</strong> Voice pitch. Range: 0.5 - 1.0, default is 1.0.</li>
+            <li><strong>Volume:</strong> Voice volume. Range: 0.0 - 1.5, default is 1.0.</li>
+            <li><strong>Format:</strong> Output audio format.</li>
+          </ul>
+        </section>
+      </section>
+      
+      <!-- MiniMax TTS -->
+      <section id="minimax-tts">
+        <h2>MiniMax TTS</h2>
+        <section id="minimax-feature">
+          <h3>Feature</h3>
+          <p>
+            <strong>Add Clone Voice:</strong> Visit <a href="https://platform.minimaxi.com/examination-center/voice-experience-center/voiceCloning" target="_blank">MiniMax</a> to clone a voice and obtain its ID. You can define your own name. Once added successfully, the voice will be available in the dropdown menu.
+          </p>
+        </section>
+        <section id="minimax-params">
+          <h3>Parameters</h3>
+          <ul>
+            <li><strong>Model:</strong> Model version, e.g., <code>speech-02-hd</code>, <code>speech-02-turbo</code>, <code>speech-01-hd</code>, etc.</li>
+            <li><strong>Language:</strong> Enhances recognition for specific dialects and minor languages. If unsure, use <code>auto</code>.</li>
+            <li><strong>Voice:</strong> Choose between system voices or user-added clone voices.</li>
+            <li><strong>Emotion:</strong> Controls emotional tone. Supported only by certain models.</li>
+            <li><strong>Rate:</strong> Voice speed. Range: 0.5 - 2.0, default is 1.0.</li>
+            <li><strong>Pitch:</strong> Voice pitch. Range: -12 to +12 (semitones), must be an integer.</li>
+            <li><strong>Volume:</strong> Voice volume. Range: 0.1 - 10.0, default is 1.0.</li>
+            <li><strong>Format:</strong> Output audio format.</li>
+            <li><strong>Subtitle Enable:</strong> Enable SRT subtitle generation (only valid for specific models).</li>
+          </ul>
+        </section>
+      </section>
+      
+      <!-- OpenAI TTS -->
+      <section id="openai-tts">
+        <h2>OpenAI TTS</h2>
+        <section id="openai-params">
+          <h3>Parameters</h3>
+          <ul>
+            <li><strong>Model:</strong> Supported models include <code>tts-1</code>, <code>tts-1-hd</code>, and <code>gpt-4o-mini-tts</code>. The GPT-4o model offers advanced style and tone control.</li>
+            <li><strong>Voice:</strong> Select from voices like <code>alloy</code>, <code>ash</code>, <code>ballad</code>, <code>coral</code>, <code>echo</code>, <code>fable</code>, <code>onyx</code>, <code>nova</code>, <code>sage</code>, <code>shimmer</code>, and <code>verse</code>.</li>
+            <li><strong>Preset:</strong> Choose from 20+ instruction presets.</li>
+            <li><strong>Instruction:</strong> Use instructions to control the tone or emotion of the output voice. Not supported by <code>tts-1</code> or <code>tts-1-hd</code>.</li>
+            <li><strong>Rate:</strong> Voice speed. Range: 0.25 - 4.0, default is 1.0.</li>
+            <li><strong>Format:</strong> Output audio format.</li>
+          </ul>
+        </section>
+      </section>
+      
+      <!-- Configuration -->
+      <section id="configuration">
+        <h2>Configuration</h2>
+        <section id="save-path">
+          <h3>Save Path</h3>
+          <p>The path where the generated audio will be saved.</p>
+        </section>
+        <section id="azure-api">
+          <h3>Azure API Settings</h3>
+          <p>
+            Fill in <strong>Region</strong> and <strong>Key</strong> to unlock full Azure TTS features. If you don’t have them, click <strong>Register</strong> to get them from the 
+            <a href="https://speech.microsoft.com/" target="_blank">Azure Speech Portal</a>. You can also check <strong>UnuseAPI</strong> to use limited features without a key.
+          </p>
+        </section>
+        <section id="minimax-api">
+          <h3>MiniMax API Settings</h3>
+          <p>
+            Enter your <strong>Group ID</strong> and <strong>Key</strong> to unlock all MiniMax features. If not available, click <strong>Register</strong> to apply at 
+            <a href="https://platform.minimaxi.com/registration" target="_blank">MiniMax Registration</a>. Also check <strong>Overseas</strong> to use the international endpoint.
+          </p>
+        </section>
+        <section id="openai-api">
+          <h3>OpenAI API Settings</h3>
+          <p>
+            Enter your <strong>Key</strong> to unlock full OpenAI TTS functionality. If you don’t have it, click <strong>Register</strong> at 
+            <a href="https://platform.openai.com/login" target="_blank">OpenAI</a>.
+          </p>
+        </section>
+      </section>
+      
+      <!-- 视频教程区域 -->
+      <section id="video-tutorial">
+        <h2>Video Tutorial</h2>
+        <p>Below is a YouTube video tutorial:</p>
+        <iframe width="100%" height="480" src="https://www.youtube.com/embed/hM-6mBFD0aI" frameborder="0" allowfullscreen></iframe>
+      </section>
+      
+    </div>
+    
+    <footer>
+      &copy; 2025 HB. All Rights Reserved.
+    </footer>
+  </div>
+</body>
+</html>

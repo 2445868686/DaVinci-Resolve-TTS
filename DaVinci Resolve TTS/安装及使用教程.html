@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DaVinci Resolve TTS Plugin 安装及使用指南</title>
+  <style>
+    /* 全局样式 */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+      color: #555;
+    }
+    /* 固定左侧目录 */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 250px;
+      height: 100%;
+      background: #fff;
+      border-right: 1px solid #e0e0e0;
+      padding: 20px;
+      overflow-y: auto;
+      box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    }
+    .sidebar h2 {
+      font-size: 1.8em;
+      margin: 0 0 20px;
+      color: #333;
+      text-align: center;
+      border-bottom: 1px solid #e0e0e0;
+      padding-bottom: 10px;
+    }
+    .sidebar ul {
+      list-style: none;
+      padding: 0;
+    }
+    .sidebar li {
+      margin: 10px 0;
+      font-size: 0.95em;
+    }
+    .sidebar li ul {
+      margin-top: 5px;
+      margin-left: 15px;
+    }
+    .sidebar a {
+      text-decoration: none;
+      color: #007BFF;
+      transition: color 0.3s;
+    }
+    .sidebar a:hover {
+      color: #0056b3;
+    }
+    /* 主内容区域：为避免被固定目录遮挡，增加左边距 */
+    .content {
+      margin-left: 270px; /* 250px (sidebar宽度) + 20px 左边距 */
+      padding: 40px;
+    }
+    /* 卡片式容器 */
+    .container {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      padding: 30px;
+      margin-bottom: 40px;
+    }
+    header {
+      text-align: center;
+      padding-bottom: 20px;
+      border-bottom: 1px solid #e0e0e0;
+      margin-bottom: 30px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 2em;
+      color: #333;
+    }
+    h2 {
+      color: #007BFF;
+      margin-top: 30px;
+      border-left: 4px solid #007BFF;
+      padding-left: 10px;
+    }
+    h3 {
+      color: #333;
+      margin-top: 20px;
+    }
+    p, ul {
+      line-height: 1.8;
+      margin: 15px 0;
+    }
+    ul {
+      padding-left: 20px;
+    }
+    code {
+      background: #f9f9f9;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-family: Consolas, Monaco, 'Courier New', monospace;
+    }
+    pre {
+      background: #f9f9f9;
+      padding: 15px;
+      border-left: 5px solid #007BFF;
+      border-radius: 4px;
+      overflow-x: auto;
+      font-family: Consolas, Monaco, 'Courier New', monospace;
+    }
+    a {
+      color: #007BFF;
+    }
+    footer {
+      text-align: center;
+      font-size: 0.9em;
+      color: #888;
+      margin-top: 40px;
+      border-top: 1px solid #e0e0e0;
+      padding-top: 20px;
+    }
+    
+    /* 移动端适配：取消固定目录 */
+    @media (max-width: 768px) {
+      .sidebar {
+        position: relative;
+        width: 100%;
+        height: auto;
+        box-shadow: none;
+        border-right: none;
+        border-bottom: 1px solid #e0e0e0;
+      }
+      .content {
+        margin-left: 0;
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- 固定左侧目录 -->
+  <nav class="sidebar">
+    <h2>目录</h2>
+    <ul>
+      <li>
+        <strong>安装指南</strong>
+        <ul>
+          <li><a href="#step-1">步骤 1：检查 Python</a></li>
+          <li><a href="#step-2">步骤 2：移动插件</a></li>
+          <li><a href="#step-3">步骤 3：安装 Speech SDK</a></li>
+        </ul>
+      </li>
+      <li>
+        <strong>使用指南</strong>
+        <ul>
+          <li><a href="#basic-functions">基本功能</a></li>
+          <li>
+            <ul>
+              <li><a href="#get-subtitles">从时间线获取字幕</a></li>
+              <li><a href="#read-textbox">朗读文本框</a></li>
+              <li><a href="#read-current-subtitle">朗读当前字幕</a></li>
+              <li><a href="#pause">停顿</a></li>
+            </ul>
+          </li>
+          <li>
+            <a href="#microsoft-tts">微软语音</a>
+            <ul>
+              <li><a href="#microsoft-features">功能</a></li>
+              <li><a href="#microsoft-params">参数</a></li>
+            </ul>
+          </li>
+          <li>
+            <a href="#hailuo-tts">海螺语音</a>
+            <ul>
+              <li><a href="#hailuo-features">功能</a></li>
+              <li><a href="#hailuo-params">参数</a></li>
+            </ul>
+          </li>
+          <li>
+            <a href="#openai-tts">OpenAI 语音</a>
+            <ul>
+              <li><a href="#openai-features">功能</a></li>
+              <li><a href="#openai-params">参数</a></li>
+            </ul>
+          </li>
+          <li><a href="#configuration">配置</a></li>
+          <!-- 添加视频教程入口 -->
+          <li><a href="#video-tutorial">视频教程</a></li>
+        </ul>
+      </li>
+    </ul>
+  </nav>
+  
+  <!-- 主内容区域 -->
+  <div class="content">
+    <!-- 安装指南区域 -->
+    <div class="container" id="install-guide">
+      <header>
+        <h1>DaVinci Resolve TTS Plugin 安装指南</h1>
+      </header>
+      <section id="step-1">
+        <h2>步骤 1：检查 DaVinci Resolve 中是否已安装 Python</h2>
+        <p>点击：<code>工作区</code> ——&gt; <code>控制台</code> ——&gt; <code>Py3</code>。如果已安装，则不会弹出窗口（直接进入<a href="#step-2">步骤 2</a>）。</p>
+        <p>若未安装，则会弹出 "<strong>Python was not found</strong>" 消息，请根据提示下载并安装，安装完成后进入<a href="#step-2">步骤 2</a>！</p>
+        <p><strong>Windows 用户：</strong>安装 Python 时请务必勾选 "<span style="color: red;">Add Python to PATH</span>" 选项，否则可能需要重新安装或手动设置环境变量。</p>
+      </section>
+      <section id="step-2">
+        <h2>步骤 2：移动 DaVinci Resolve TTS 插件</h2>
+        <p>将 <code>DaVinci Resolve TTS</code> 文件夹移动到以下位置：</p>
+        <pre><code>Mac: 
+/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/Scripts/Edit 
+
+Win: 
+C:\ProgramData\Blackmagic Design\DaVinci Resolve\Fusion\Scripts\Edit</code></pre>
+      </section>
+      <section id="step-3">
+        <h2>步骤 3：在终端中运行以下命令以安装 Speech SDK</h2>
+        <h3>Mac 用户：</h3>
+        <pre><code>pip install requests azure-cognitiveservices-speech edge_tts pypinyin</code></pre>
+        <h3>Win 用户：</h3>
+        <pre><code>pip install requests azure-cognitiveservices-speech edge_tts pypinyin</code></pre>
+        <p>安装完成后，通过 <code>工作台</code> ——&gt; <code>脚本</code> 在 DaVinci Resolve 中打开插件。</p>
+      </section>
+    </div>
+    
+    <!-- 使用指南区域 -->
+    <div class="container" id="usage-guide">
+      <header>
+        <h1>DaVinci Resolve TTS Plugin 使用指南</h1>
+      </header>
+      
+      <!-- 基本功能 -->
+      <section id="basic-functions">
+        <h2>基本功能</h2>
+        <h3 id="get-subtitles">从时间线获取字幕</h3>
+        <p>点击「<strong>从时间线获取字幕</strong>」，可将当前时间线的字幕内容填入文本框中！</p>
+        
+        <h3 id="read-textbox">朗读文本框</h3>
+        <p>在文本框中输入需要生成音频的文字，点击「<strong>朗读文本框</strong>」。音频合成后，根据<strong>音频长度</strong>，自动在播放头位置寻找<span style="font-weight: bold;">第一条不会与现有音频重叠的空白轨道</span>进行插入。</p>
+        
+        <h3 id="read-current-subtitle">朗读当前字幕</h3>
+        <p>将播放头对准目标字幕块，点击「<strong>朗读当前字幕</strong>」，程序会读取字幕内容、合成音频，并根据<strong>音频长度</strong>，自动将其插入到字幕起始时间处的<span style="font-weight: bold;">第一条不会与现有音频重叠的空白轨道</span>。</p>
+        
+        <h3 id="pause">停顿</h3>
+        <p>在需要停顿的文本间设置停顿时间（例如 <code>800</code> 毫秒），点击「<strong>停顿</strong>」按钮，即可在文本间插入如下代码：<code>&lt;break time="800ms"/&gt;</code></p>
+      </section>
+      
+      <hr>
+      
+      <!-- 微软语音 -->
+      <section id="microsoft-tts">
+        <h2>微软语音</h2>
+        <h3 id="microsoft-features">功能</h3>
+        <p><strong>发音：</strong> 当前仅支持 <code>Chinese（普通话）</code>。选中目标文字后点击「<strong>发音</strong>」，即可通过拼音手动调整发音效果。</p>
+        <h3 id="microsoft-params">参数</h3>
+        <ul>
+          <li><strong>语言：</strong>选择生成音频的语言（如中文、英文、日文）</li>
+          <li><strong>类型：</strong>选择人声类型（男性、女性、儿童）</li>
+          <li><strong>名称：</strong>提供超过500种人声</li>
+          <li><strong>多语言：</strong>启用后支持多语言</li>
+          <li><strong>风格：</strong>指定语音风格（如「新闻播报」、「愉悦」、「叙述」等）</li>
+          <li><strong>风格强度：</strong>控制风格浓烈程度（0.0 - 2.0，默认 1.0）</li>
+          <li><strong>语速：</strong>生成音频的语速（0.0 - 3.0，默认 1.0）</li>
+          <li><strong>音调：</strong>生成音频的语调（0.5 - 1.5，默认 1.0）</li>
+          <li><strong>音量：</strong>生成音频的音量（0.0 - 1.5，默认 1.0）</li>
+          <li><strong>格式：</strong>生成音频的格式</li>
+        </ul>
+      </section>
+      
+      <hr>
+      
+      <!-- 海螺语音 -->
+      <section id="hailuo-tts">
+        <h2>海螺语音</h2>
+        <h3 id="hailuo-features">功能</h3>
+        <p><strong>添加克隆音色：</strong>前往 <a href="https://platform.minimaxi.com/examination-center/voice-experience-center/voiceCloning" target="_blank">MiniMax</a> 获取音色ID，添加成功后可在音色下拉菜单中选择自定义音色。</p>
+        <h3 id="hailuo-params">参数</h3>
+        <ul>
+          <li><strong>模型：</strong>请求的模型版本，如 <code>speech-02-hd</code>、<code>speech-02-turbo</code>、<code>speech-01-hd</code></li>
+          <li><strong>语言：</strong>指定小语种或方言（未明确时可选 <code>auto</code>）</li>
+          <li><strong>音色：</strong>可选择系统预设或自定义克隆音色</li>
+          <li><strong>情绪：</strong>控制合成语音的情绪（部分模型支持）</li>
+          <li><strong>语速：</strong>生成音频的语速（0.5 - 2.0，默认 1.0）</li>
+          <li><strong>音调：</strong>生成音频的语调（-12 至 +12，默认 0，取整数）</li>
+          <li><strong>音量：</strong>生成音频的音量（0 - 10.0，默认 1.0）</li>
+          <li><strong>格式：</strong>生成音频的格式</li>
+          <li><strong>生成SRT字幕：</strong>是否开启字幕服务（默认 false，仅部分模型支持）</li>
+        </ul>
+      </section>
+      
+      <hr>
+      
+      <!-- OpenAI 语音 -->
+      <section id="openai-tts">
+        <h2>OpenAI 语音（TTS）</h2>
+        <h3 id="openai-features">功能</h3>
+        <p>（暂无详细功能说明）</p>
+        <h3 id="openai-params">参数</h3>
+        <ul>
+          <li><strong>模型：</strong>支持 <code>tts-1</code>、<code>tts-1-hd</code>、<code>gpt-4o-mini-tts</code>（支持更强语气指令与音色表现）</li>
+          <li><strong>音色：</strong>支持的语音包括：<code>alloy</code>、<code>ash</code>、<code>ballad</code>、<code>coral</code>、<code>echo</code>、<code>fable</code>、<code>onyx</code>、<code>nova</code>、<code>sage</code>、<code>shimmer</code>、<code>verse</code></li>
+          <li><strong>预设：</strong>提供20余种指令预设</li>
+          <li><strong>指令：</strong>使用指令控制生成音频（不适用于 <code>tts-1</code> 与 <code>tts-1-hd</code>）</li>
+          <li><strong>语速：</strong>生成音频的语速（0.25 - 4.0，默认 1.0）</li>
+          <li><strong>格式：</strong>生成音频的格式</li>
+        </ul>
+      </section>
+      
+      <hr>
+      
+      <!-- 配置 -->
+      <section id="configuration">
+        <h2>配置</h2>
+        <h3>保存路径</h3>
+        <p>指定生成音频的保存路径。</p>
+        <h3>Azure API 配置</h3>
+        <p>填写「区域」与「密钥」以解锁完整 Azure TTS 功能；如无密钥，可点击「注册」前往 <a href="https://speech.microsoft.com/" target="_blank">Azure</a> 官网获取。也可选择停用 API 使用部分免费微软人声。</p>
+        <h3>MiniMax API 配置</h3>
+        <p>填写「Group ID」与「密钥」以解锁完整 MiniMax TTS 功能；如无密钥，可点击「注册」前往 <a href="https://platform.minimaxi.com/registration" target="_blank">MiniMax</a> 获取，并选择「海外」使用国际版服务端点。</p>
+        <h3>OpenAI API 配置</h3>
+        <p>填写「密钥」以解锁完整 OpenAI TTS 功能；如无密钥，可点击「注册」前往 <a href="https://platform.openai.com/login" target="_blank">OpenAI</a> 获取。</p>
+      </section>
+      
+      <hr>
+      
+      <!-- 视频教程 -->
+      <section id="video-tutorial">
+        <h2>视频教程</h2>
+        <p>以下为 B 站视频教程示例：</p>
+        <iframe width="100%" height="480" src="https://player.bilibili.com/player.html?bvid=BV1pyYCeBESt&page=1" frameborder="0" allowfullscreen></iframe>
+      </section>
+      
+    </div>
+    
+    <footer>
+      &copy; 2025 HB. All Rights Reserved.
+    </footer>
+  </div>
+</body>
+</html>
