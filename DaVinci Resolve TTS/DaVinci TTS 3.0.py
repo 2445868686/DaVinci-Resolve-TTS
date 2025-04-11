@@ -700,6 +700,7 @@ win = dispatcher.AddWindow({
                         ui.HGroup({"Weight": 0.1}, [
                             ui.CheckBox({"ID": "LangEnCheckBox", "Text": "EN", "Checked": True, "Alignment": {"AlignRight": True}, "Weight": 0}),
                             ui.CheckBox({"ID": "LangCnCheckBox", "Text": "简体中文", "Checked": False, "Alignment": {"AlignRight": True}, "Weight": 1}),
+                            ui.Button({"ID": "openGuideButton", "Text": "教程","Weight": 0.1}),
                         ]),
                         ui.Button({
                             "ID": "OpenLinkButton", 
@@ -913,6 +914,7 @@ translations = {
         "Browse":"浏览", 
         "ShowAzure":"配置",
         "ShowMiniMax": "配置",
+        "openGuideButton":"使用教程",
         "ShowOpenAI": "配置",
         "ShowMiniMaxClone": "添加克隆音色",
         "OpenLinkButton":"关注公众号：游艺所\n\n>>>点击查看更多信息<<<\n\n© 2025, Copyright by HB.",
@@ -960,6 +962,7 @@ translations = {
         "OpenAIPresetLabel": "Preset",
         "OpenAIPreviewButton": "Preview",
         "OpenAIInstructionLabel": "Instruction",
+        "openGuideButton":"Usage Tutorial",
         "minimaxPreviewButton":"Preview",
         "LanguageLabel": "Language",
         "NameTypeLabel": "Type",
@@ -2969,6 +2972,15 @@ def on_azure_register_link_button_clicked(ev):
     url = "https://speech.microsoft.com/portal/voicegallery"
     webbrowser.open(url)
 azure_config_window.On.AzureRegisterButton.Clicked = on_azure_register_link_button_clicked
+
+def on_open_guide_button_clicked(ev):
+    checked = items["LangEnCheckBox"].Checked
+    html_path  = os.path.join(script_path, 'Installation-Usage-Guide.html'if checked else '安装及使用教程.html') 
+    if os.path.exists(html_path):
+        webbrowser.open(f'file://{html_path}')
+    else:
+        print("找不到教程文件:", html_path)
+win.On.openGuideButton.Clicked = on_open_guide_button_clicked
 
 def on_show_azure(ev):
     azure_config_window.Show()
