@@ -258,6 +258,7 @@ import re
 import wave
 import subprocess
 import json
+from typing import Dict, Any, List
 import edge_tts
 import azure.cognitiveservices.speech as speechsdk
 try:
@@ -303,7 +304,7 @@ class STATUS_MESSAGES:
     voices_list         = ("The voices_list.json file is missing.", "缺少voices_list.json文件.")
     clone_voices_error  = ("It already exists and cannot be added again!", "已存在，无法重复添加！")
     clone_voices_error1  = ("The parameters were filled in incorrectly!", "参数填写错误！")
-    
+    add_clone_succeed =("Added success","添加成功！")
 def check_or_create_file(file_path):
     if os.path.exists(file_path):
         pass
@@ -392,8 +393,8 @@ default_settings = {
 
 }
 
-current_manager = resolve.GetProjectManager()
-current_project = current_manager.GetCurrentProject()
+project_manager = resolve.GetProjectManager()
+current_project = project_manager.GetCurrentProject()
 current_timeline = current_project.GetCurrentTimeline()
 
 def get_first_empty_track(timeline, start_frame, end_frame, media_type):
@@ -415,6 +416,73 @@ def get_first_empty_track(timeline, start_frame, end_frame, media_type):
             return track_index
         
         track_index += 1
+def render_audio_by_marker(output_dir):
+    """
+    使用当前Project、当前Timeline的第一个Marker，导出相应区段的音频（单一剪辑模式）。
+    导出完成后，返回可能的音频文件完整路径（字符串）。
+    若没有Marker则返回None。
+    """
+    project_manager = resolve.GetProjectManager()
+    current_project = project_manager.GetCurrentProject()
+    current_timeline = current_project.GetCurrentTimeline()
+    timeline_start_frame = current_timeline.GetStartFrame()
+    current_project.SetCurrentRenderMode(1)
+    current_mode = current_project.GetCurrentRenderMode()
+    markers = current_timeline.GetMarkers()
+    
+    if current_mode != 1:
+        print("渲染模式切换失败，无法继续。")
+        return None
+    
+    if not markers:
+        print("没有找到任何 Marker，无法执行渲染。")
+        return None
+        
+    first_frame_id = sorted(markers.keys())[0]
+    marker_info = markers[first_frame_id]
+
+    local_start = int(first_frame_id)
+    local_end   = local_start + int(marker_info["duration"]) - 1
+
+    mark_in  = timeline_start_frame + local_start
+    mark_out = timeline_start_frame + local_end
+    
+    filename = f"clone_{current_timeline.GetUniqueId()}"
+    
+    render_settings = {
+        "SelectAllFrames": False,
+        "MarkIn": mark_in,
+        "MarkOut": mark_out,
+        "TargetDir": output_dir,
+        "CustomName": filename,
+        "UniqueFilenameStyle": 1,   # 1 => 序号添加在后缀
+        "ExportVideo": False,
+        "ExportAudio": True,
+        "AudioCodec": "pcm",
+        "AudioBitDepth": 32,        # 32-bit 浮点数若不被支持, 可尝试改成 16 或 24
+        "AudioSampleRate": 48000,
+        "Format": "WAV",           # 容器格式
+    }
+
+    minimax_clone_items["minimaxCloneStatus"].Text = "Start..."
+    current_project.SetRenderSettings(render_settings)
+    job_id = current_project.AddRenderJob()
+    render_result = current_project.StartRendering([job_id])
+    while current_project.IsRenderingInProgress():
+        minimax_clone_items["minimaxCloneStatus"].Text = f"Rendering ."
+        minimax_clone_items["minimaxCloneStatus"].Text = f"Rendering .."
+        minimax_clone_items["minimaxCloneStatus"].Text = f"Rendering ..."
+        time.sleep(1)  # 等待 1 秒再检查
+    clone_filename = f"{filename}.mov"
+    clone_file_path = os.path.join(output_dir, clone_filename)
+    renamed_path = clone_file_path.replace(".mov", ".wav")
+    os.rename(clone_file_path, renamed_path)
+
+    
+
+    return renamed_path
+
+
 
 def add_to_media_pool_and_timeline(start_frame, end_frame, filename):
     project_manager = resolve.GetProjectManager()
@@ -475,6 +543,7 @@ def add_to_media_pool_and_timeline(start_frame, end_frame, filename):
         update_status(STATUS_MESSAGES.loaded_to_timeline)
     else:
         print("Failed to append clip to timeline.")
+
 
 ui = fusion.UIManager
 dispatcher = bmd.UIDispatcher(ui)
@@ -831,7 +900,7 @@ minimax_clone_window = dispatcher.AddWindow(
     {
         "ID": "MiniMaxCloneWin",
         "WindowTitle": "MiniMax Clone",
-        "Geometry": [900, 400, 400, 200],
+        "Geometry": [900, 400, 400, 300],
         "Hidden": True,
         "StyleSheet": """
         * {
@@ -843,6 +912,8 @@ minimax_clone_window = dispatcher.AddWindow(
         ui.VGroup(
             [
                 ui.Label({"ID": "minimaxCloneLabel","Text": "MiniMax 克隆音色", "Alignment": {"AlignHCenter": True, "AlignVCenter": True}}),
+                ui.Label({"ID": "minimaxCloneGuide","Text": "", "Weight": 0.2}),
+                ui.CheckBox({"ID": "minimaxOnlyAddID", "Text": "已有克隆音色", "Checked": True, "Alignment": {"AlignRight": True}, "Weight": 0.1}),
                 ui.HGroup({"Weight": 1}, [
                     ui.Label({"ID": "minimaxCloneVoiceNameLabel","Text": "Name", "Weight": 0.2}),
                     ui.LineEdit({"ID": "minimaxCloneVoiceName", "Weight": 0.8})
@@ -851,12 +922,19 @@ minimax_clone_window = dispatcher.AddWindow(
                     ui.Label({"ID": "minimaxCloneVoiceIDLabel","Text": "ID", "Weight": 0.2}),
                     ui.LineEdit({"ID": "minimaxCloneVoiceID", "Weight": 0.8}),
                 ]),
-
-                #ui.CheckBox({"ID": "NeedNoiseReduction", "Text": "是否开启降噪", "Checked": False, "Alignment": {"AlignLeft": True}, "Weight": 0.1}),
+               
+                ui.HGroup({"Weight": 1}, [
+                    ui.CheckBox({"ID": "minimaxNeedNoiseReduction", "Text": "是否开启降噪", "Checked": False, "Alignment": {"AlignLeft": True}, "Weight": 0.1}),
+                    ui.CheckBox({"ID": "minimaxNeedVolumeNormalization", "Text": "音量归一化", "Checked": False, "Alignment": {"AlignLeft": True}, "Weight": 0.1}),
+                ]),
+                ui.Label({"ID": "minimaxCloneStatus","Text": "", "Weight": 0.2}),
+                
+                
                 ui.HGroup({"Weight": 1}, [
                     ui.Button({"ID": "MiniMaxCloneConfirm", "Text": "添加","Weight": 1}),
                     ui.Button({"ID": "MiniMaxCloneCancel", "Text": "取消","Weight": 1}),
                 ]),
+                ui.Label({"ID": "minimaxCloneStatus","Text": "", "Weight": 0.2}),
                 
             ]
         )
@@ -1566,6 +1644,7 @@ else:
 
 
 
+
 def get_english_name_type(chinese_name_type):
     return NameTypeMapping.get(chinese_name_type, chinese_name_type)
 
@@ -1751,6 +1830,12 @@ def on_subtitle_text_changed(ev):
     global stream
     stream = None
 win.On.AzureTxt.TextChanged = on_subtitle_text_changed
+
+def on_minimax_only_add_id_checkbox_clicked(ev):
+    minimax_clone_items["minimaxNeedNoiseReduction"].Enabled = not minimax_clone_items["minimaxOnlyAddID"].Checked
+    minimax_clone_items["minimaxNeedVolumeNormalization"].Enabled = not minimax_clone_items["minimaxOnlyAddID"].Checked
+
+minimax_clone_window.On.minimaxOnlyAddID.Clicked = on_minimax_only_add_id_checkbox_clicked
 
 def on_unuseapi_checkbox_clicked(ev):
     global voice_dict,Language
@@ -2991,6 +3076,8 @@ def on_show_minimax(ev):
 win.On.ShowMiniMax.Clicked = on_show_minimax
 
 def on_show_minimax_clone(ev):
+    minimax_clone_items["minimaxNeedNoiseReduction"].Enabled = not minimax_clone_items["minimaxOnlyAddID"].Checked
+    minimax_clone_items["minimaxNeedVolumeNormalization"].Enabled = not minimax_clone_items["minimaxOnlyAddID"].Checked
     minimax_clone_window.Show()
 win.On.ShowMiniMaxClone.Clicked = on_show_minimax_clone
 
@@ -3012,29 +3099,81 @@ def on_minimax_close(ev):
 minimax_config_window.On.MiniMaxConfirm.Clicked = on_minimax_close
 minimax_config_window.On.MiniMaxConfigWin.Close = on_minimax_close
 
-def on_minimax_clone_confirm(ev):
-    global minimax_clone_voices  # 声明我们要更新的全局变量
+def minimax_upload_file(api_key, group_id, file_path,intl=False):
+    """
+    上传音频文件并获取 file_id
+    :param api_key: API 访问密钥
+    :param group_id: 组 ID
+    :param file_path: 音频文件路径
+    :return: file_id
+    """
+    minimax_clone_items["minimaxCloneStatus"].Text = f"Upload..."
+    if intl :
+        url = f'https://api.minimaxi.chat/v1/files/upload?GroupId={group_id}'
+    else:
+        url = f'https://api.minimax.chat/v1/files/upload?GroupId={group_id}'
+    headers = {
+        'Authorization': f'Bearer {api_key}'
+    }
+    data = {'purpose': 'voice_clone'}
+    files = {'file': open(file_path, 'rb')}
+    
+    response = requests.post(url, headers=headers, data=data, files=files)
+    response_data = response.json()
+    
 
+    if response.status_code == 200 and "file" in response_data:
+        return response_data["file"].get("file_id")
+    else:
+        raise Exception(f"文件上传失败: {response_data}")
+
+def minimax_submit_voice_clone(api_key, group_id, file_id, voice_id,intl=False):
+    """
+    提交克隆请求
+    :param api_key: API 访问密钥
+    :param group_id: 组 ID
+    :param file_id: 上传的文件 ID
+    :param voice_id: 目标声音 ID
+    :return: API 响应
+    """
+    minimax_clone_items["minimaxCloneStatus"].Text = f"Clone..."
+    if intl :
+        url = f'https://api.minimaxi.chat/v1/voice_clone?GroupId={group_id}'
+    else:
+        url = f'https://api.minimax.chat/v1/voice_clone?GroupId={group_id}'
+    payload = json.dumps({
+        "file_id": file_id,
+        "voice_id": voice_id
+    })
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json'
+    }
+
+    response = requests.post(url, headers=headers, data=payload)
+    return response.json()
+
+def add_clone_voice(
+    voice_file: str,
+    voice_name: str,
+    voice_id: str,
+    items: Dict[str, Any],
+    minimax_clone_voices: List[Dict[str,str]],
+    minimax_voices: List[Dict[str,str]],
+    lang_en_checked: bool
+) -> List[Dict[str,str]]:
     # 1. 读文件
     try:
-        with open(voice_file, 'r', encoding='utf-8') as file:
+        with open(voice_file, 'r', encoding='utf-8') as f:
             try:
-                data = json.load(file)
+                data = json.load(f)
             except json.JSONDecodeError:
                 data = {}
     except IOError:
         raise Exception(f"Cannot read file: {voice_file}")
-    
-    # 确保 key 存在
-    if "minimax_clone_voices" not in data:
-        data["minimax_clone_voices"] = []
 
-    # 2. 读 UI 输入并校验
-    voice_name = minimax_clone_items["minimaxCloneVoiceName"].Text.strip()
-    voice_id   = minimax_clone_items["minimaxCloneVoiceID"].Text.strip()
-    if not voice_name or not voice_id:
-        show_warning_message(STATUS_MESSAGES.clone_voices_error1)
-        return
+    # 2. 确保 key 存在
+    data.setdefault("minimax_clone_voices", [])
 
     # 3. 检查重复
     exists = any(
@@ -3043,33 +3182,93 @@ def on_minimax_clone_confirm(ev):
     )
     if exists:
         show_warning_message(STATUS_MESSAGES.clone_voices_error)
-        return
+        return minimax_clone_voices  # 不变
 
-    # 4. 插入新条目到 data 列表开头
+    # 4. 插入新条目到开头
     new_voice = {"voice_name": voice_name, "voice_id": voice_id}
     data["minimax_clone_voices"].insert(0, new_voice)
 
     # 5. 更新全局变量
-    minimax_clone_voices = data["minimax_clone_voices"]
+    updated_clone_voices = data["minimax_clone_voices"]
 
     # 6. 刷新下拉框
-    items["minimaxVoiceCombo"].Clear()
-    checked = items["LangEnCheckBox"].Checked
-    for voice in minimax_clone_voices:
-        items["minimaxVoiceCombo"].AddItem(
-            voice["voice_id"] if checked else voice["voice_name"]
-        )
-    for voice in minimax_voices:
-        items["minimaxVoiceCombo"].AddItem(
-            voice["voice_id"] if checked else voice["voice_name"]
-        )
+    combo = items["minimaxVoiceCombo"]
+    combo.Clear()
+    # 优先添加克隆列表，再添加原始列表
+    for voice in updated_clone_voices + minimax_voices:
+        combo.AddItem(voice["voice_id"] if lang_en_checked else voice["voice_name"])
 
     # 7. 写回文件
     try:
-        with open(voice_file, 'w', encoding='utf-8') as file:
-            json.dump(data, file, ensure_ascii=False, indent=4)
+        with open(voice_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=4)
     except IOError:
         raise Exception(f"Cannot write to file: {voice_file}")
+    
+    show_warning_message(STATUS_MESSAGES.add_clone_succeed)
+    return updated_clone_voices
+
+def on_minimax_clone_confirm(ev):
+    if minimax_items["minimaxGroupID"].Text == '' or minimax_items["minimaxApiKey"].Text == '':
+        show_warning_message(STATUS_MESSAGES.enter_api_key)
+        return
+    group_id = minimax_items["minimaxGroupID"].Text
+    api_key = minimax_items["minimaxApiKey"].Text
+    voice_name = minimax_clone_items["minimaxCloneVoiceName"].Text.strip()
+    voice_id   = minimax_clone_items["minimaxCloneVoiceID"].Text.strip()
+    
+    if not voice_name or not voice_id:
+        show_warning_message(STATUS_MESSAGES.clone_voices_error1)
+        return
+    
+    global minimax_clone_voices  # 声明我们要更新的全局变量
+    
+    if  minimax_clone_items["minimaxOnlyAddID"].Checked:
+        minimax_clone_voices = add_clone_voice(
+            voice_file=voice_file,
+            voice_name=voice_name,
+            voice_id=voice_id,
+            items=items,
+            minimax_clone_voices=minimax_clone_voices,
+            minimax_voices=minimax_voices,
+            lang_en_checked=items["LangEnCheckBox"].Checked
+        )
+        
+    else:
+        checked = minimax_items["intlCheckBox"].Checked
+        file_path = render_audio_by_marker(items["Path"].Text)
+        print("clone file path:",file_path)
+
+        try:
+            
+            file_id = minimax_upload_file(api_key, group_id, file_path,checked)
+            minimax_clone_items["minimaxCloneStatus"].Text = f"上传成功，file_id:{file_id}"
+            print("上传成功，file_id:", file_id)
+
+            clone_response = minimax_submit_voice_clone(api_key, group_id, file_id, voice_id,checked)
+            print("克隆请求响应:", clone_response)
+        except Exception as e:
+            minimax_clone_items["minimaxCloneStatus"].Text = f"error:{e}"
+            print("发生错误:", e)
+            return
+        
+        if clone_response.get("base_resp", {}).get("status_code") == 0:
+            # 调用通用函数
+            minimax_clone_voices = add_clone_voice(
+                voice_file=voice_file,
+                voice_name=voice_name,
+                voice_id=voice_id,
+                items=items,
+                minimax_clone_voices=minimax_clone_voices,
+                minimax_voices=minimax_voices,
+                lang_en_checked=items["LangEnCheckBox"].Checked
+            )
+            minimax_clone_items["minimaxCloneStatus"].Text = "克隆成功！"
+        else:
+            # 错误处理
+            minimax_clone_items["minimaxCloneStatus"].Text = f"error:{clone_response.get('base_resp', {}).get('status_msg')}"
+    
+    
 
 
 minimax_clone_window.On.MiniMaxCloneConfirm.Clicked = on_minimax_clone_confirm
