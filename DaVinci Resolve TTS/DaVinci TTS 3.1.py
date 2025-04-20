@@ -35,8 +35,13 @@ infomsg_cn = """
     </style>
 </head>
 <body>
+    <h3>更新[3.1] 2025-04-20</h3>
+    <li>-MiniMax语音</li>
+    <ul>
+            <li>新增从达芬奇获取音频克隆音色！</li> 
+        </ul>   
     <h3>更新[3.0] 2025-04-05</h3>
-        <li>-海螺语音</li>
+        <li>-MiniMax语音</li>
         <ul>
             <li>新增speech-02-hd，全新的HD模型，拥有更出色的韵律和稳定性，复刻相似度和音质表现突出！</li> 
             <li>新增speech-02-turbo，全新的Turbo模型，拥有更出色的韵律和稳定性，小语种能力加强，性能表现出色！</li> 
@@ -51,7 +56,7 @@ infomsg_cn = """
         <ul>
             <li>新增13种HD高清语音</li> 
         </ul>
-        <li>-海螺语音</li>
+        <li>-MiniMax语音</li>
         <ul>
             <li>新增语种选项，增强对指定的小语种和方言的识别能力！</li> 
             <li>新增字幕功能，生成音频文件对应的时间戳字幕！</li> 
@@ -161,6 +166,11 @@ infomsg_en = """
     </style>
 </head>
 <body>
+<h3>Update [3.1] 2025-04-20</h3> 
+<li>-Minimax TTS</li> 
+    <ul> 
+       <li>Add a feature to pull audio from DaVinci so we can clone the voice’s timbre!</li>
+    </ul>
 <h3>Update [3.0] 2025-04-05</h3> 
 <li>-Minimax TTS</li> 
     <ul> 
@@ -245,7 +255,200 @@ infomsg_en = """
 </body>
 </html>
 """
+clone_info_cn = """
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            color: #ffffff;
+            padding: 20px;
+        }
+        h3 {
+            font-weight: bold;
+            font-size: 1.5em;
+            margin-top: 15px;
+            margin-bottom: 0px; /* Adjust spacing */
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 5px;
+            color: #c7a364; /* Yellow */
+        }
+        h4 {
+            font-weight: bold;
+            font-size: 1em;
+            margin-top: 15px;
+            margin-bottom: 0px; /* Adjust spacing */
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 5px;
+            color: #c7a364; /* Yellow */
+        }
+        p {
+            font-size: 1.2em;
+            margin-top: 5px;
+            margin-bottom: 20px; /* Adjust spacing */
+            color: #a3a3a3; /* White */
+        }
+        a {
+            color: #1e90ff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+  <!-- 标题居中 -->
+  <h3 style="text-align: center;">MiniMax 克隆说明</h3>
 
+  <h4>☑ 已有克隆音色</h4>
+  <ul>
+    <li>
+        如果已经从MiniMax官方克隆了音色，直接填入
+        <strong>音色ID</strong> 和 <strong>音色名称</strong>，点击<strong>添加</strong>后，
+        音色列表中即可看到您的克隆音色！
+    </li>
+</ul>
+  <h4>☐ 已有克隆音色<br>（从达芬奇导出音频进行克隆）</h4>
+  <li>
+  <ul>
+    <li><strong>步骤一：</strong>确保时间线上已有要克隆的音频。</li>
+    <li>
+      <strong>步骤二：</strong>按 <strong>M 键</strong> 添加标记点，
+      按住 <strong>Alt 键</strong> 拖拽选取音频区间（<strong>10 秒–5 分钟</strong>）。
+    </li>
+    <li>
+      <strong>步骤三：</strong>在交付界面取消勾选<strong>导出视频</strong>，
+      将音频格式设置为 <strong>MP3</strong> 或 <strong>WAV</strong>。
+    </li>
+    <li>
+      <strong>步骤四：</strong>填写 <strong>音色名称</strong> 和 <strong>音色ID</strong>，
+      根据需要勾选 <strong>降噪</strong> 和 <strong>音频统一</strong> 选项。
+    </li>
+    <li>
+      <strong>步骤五：</strong>输入 <strong>试听文本</strong>，
+      克隆完成后试听音频会自动加载到时间线进行预览。
+    </li>
+    <li>
+      <strong>步骤六：</strong>点击<strong>克隆</strong>，克隆完成后
+      <strong>克隆ID</strong> 将出现在音色列表中。
+    </li>
+  </li>
+</ul>
+  <h4>费用说明</h4>
+  <li>
+    <ul>
+    <li>确保 minimax 账户余额充足，<strong>9.9 元/音色</strong>。</li>
+    <li>克隆音色时不会立即扣费，费用将在<strong>首次使用该音色合成语音</strong>时收取。</li>
+  </ul>
+  </li>
+</body>
+</html>
+
+"""
+
+clone_info_en="""
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            color: #ffffff;
+            padding: 20px;
+        }
+        h3 {
+            font-weight: bold;
+            font-size: 1.5em;
+            margin-top: 15px;
+            margin-bottom: 0px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 5px;
+            color: #c7a364; /* Yellow */
+        }
+        h4 {
+            font-weight: bold;
+            font-size: 1em;
+            margin-top: 15px;
+            margin-bottom: 0px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 5px;
+            color: #c7a364; /* Yellow */
+        }
+        p {
+            font-size: 1.2em;
+            margin-top: 5px;
+            margin-bottom: 20px;
+            color: #a3a3a3; /* White */
+        }
+        a {
+            color: #1e90ff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        ul {
+            margin-top: 5px;
+            margin-bottom: 20px;
+            padding-left: 20px;
+            color: #a3a3a3;
+        }
+        li {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 标题居中 -->
+    <h3 style="text-align: center;">MiniMax Clone Instructions</h3>
+
+    <h4>☑ Existing Cloned Voice</h4>
+    <ul>
+        <li>
+            If you have already cloned a voice from the official MiniMax, simply enter the <strong>Voice ID</strong> and <strong>Voice Name</strong>, then click <strong>Add</strong>. You will see your cloned voice in the voice list!
+        </li>
+    </ul>
+
+    <h4>☐ Clone from DaVinci Exported Audio</h4>
+    <ul>
+        <li><strong>Step 1:</strong> Ensure the timeline contains the audio you want to clone.</li>
+        <li>
+            <strong>Step 2:</strong> Press <strong>M</strong> to add a marker, then hold <strong>Alt</strong> and drag to select the audio segment 
+            (<strong>10 seconds–5 minutes</strong>).
+        </li>
+        <li>
+            <strong>Step 3:</strong> In the delivery panel, uncheck <strong>Export Video</strong>, and set the audio format to 
+            <strong>MP3</strong> or <strong>WAV</strong>.
+        </li>
+        <li>
+            <strong>Step 4:</strong> Enter the <strong>Voice Name</strong> and <strong>Voice ID</strong>, and select the 
+            <strong>Noise Reduction</strong> and <strong>Audio Normalization</strong> options as needed.
+        </li>
+        <li>
+            <strong>Step 5:</strong> Enter the <strong>Preview Text</strong>. Once cloning is complete, the preview audio will automatically load into the timeline for playback.
+        </li>
+        <li>
+            <strong>Step 6:</strong> Click <strong>Clone</strong>. After completion, the <strong>Clone ID</strong> will appear in the voice list.
+        </li>
+    </ul>
+
+    <h4>Cost Explanation</h4>
+    <ul>
+        <li>Ensure your MiniMax account has sufficient balance; <strong>$3 per voice</strong>.</li>
+        <li>
+            Cloning a voice will not charge immediately; the fee is applied upon the <strong>first use</strong> of the voice for synthesis.
+        </li>
+    </ul>
+</body>
+</html>
+
+"""
 import platform
 from xml.dom import minidom
 import xml.etree.ElementTree as ET
@@ -305,6 +508,8 @@ class STATUS_MESSAGES:
     clone_voices_error  = ("It already exists and cannot be added again!", "已存在，无法重复添加！")
     clone_voices_error1 = ("The parameters were filled in incorrectly!", "参数填写错误！")
     add_clone_succeed   = ("Added success!","添加成功！")
+    file_size           =("Exported file exceeds 20MB and may not be uploadable!","导出文件超过 20MB，可能无法上传！")
+    duration_seconds    =("Marks During should be between 10 seconds and 5 minutes!","标记长度应在10秒到5分钟之间！")
     insert_mark         = ("Please use Mark points to indicate the reference audio range first!","请先使用Mark点标记参考音频范围！")
 def check_or_create_file(file_path):
     if os.path.exists(file_path):
@@ -447,6 +652,13 @@ def render_audio_by_marker(output_dir):
     local_start = int(first_frame_id)
     local_end   = local_start + int(marker_info["duration"]) - 1
 
+    frame_rate = float(current_project.GetSetting("timelineFrameRate"))
+    duration_frames = int(marker_info["duration"])
+    duration_seconds = duration_frames / frame_rate
+    if duration_seconds < 10 or duration_seconds > 300:
+        show_warning_message(STATUS_MESSAGES.duration_seconds)
+        return None
+
     mark_in  = timeline_start_frame + local_start
     mark_out = timeline_start_frame + local_end
     
@@ -551,7 +763,7 @@ x_center = (screen_width - window_width) // 2
 y_center = (screen_height - window_height) // 2
 win = dispatcher.AddWindow({
     "ID": "MainWin", 
-    "WindowTitle": "DaVinci TTS 3.0", 
+    "WindowTitle": "DaVinci TTS 3.1", 
     "Geometry": [x_center, y_center, window_width, window_height],
     "Spacing": 10,
     "StyleSheet": """
@@ -896,7 +1108,7 @@ minimax_clone_window = dispatcher.AddWindow(
     {
         "ID": "MiniMaxCloneWin",
         "WindowTitle": "MiniMax Clone",
-        "Geometry": [900, 400, 400, 400],
+        "Geometry": [900, 400, 600, 420],
         "Hidden": True,
         "StyleSheet": """
         * {
@@ -904,50 +1116,66 @@ minimax_clone_window = dispatcher.AddWindow(
         }
     """
     },
-    [
-        ui.VGroup(
+    ui.VGroup( [
+        ui.HGroup({"Weight": 0.1}, [
+                        ui.Label({"ID": "minimaxCloneLabel","Text": "MiniMax 克隆音色", "Alignment": {"AlignHCenter": True, "AlignVCenter": True,"Weight": 0.1}}),
+                        ]),
+                        
+        ui.HGroup({ "Weight": 1},
             [
-                ui.HGroup({"Weight": 0.1}, [
-                   ui.Label({"ID": "minimaxCloneLabel","Text": "MiniMax 克隆音色", "Alignment": {"AlignHCenter": True, "AlignVCenter": True,"Weight": 0.1}}),
-                ]),
-                
-                ui.TextEdit({"ID": "minimaxCloneGuide", "Text": "", "ReadOnly": True, "Font": ui.Font({"PixelSize": 14})}),
-                
-                ui.CheckBox({"ID": "minimaxOnlyAddID", "Text": "已有克隆音色", "Checked": True, "Alignment": {"AlignRight": True}, "Weight": 0.1}),
-                ui.HGroup({"Weight": 0.1}, [
-                    ui.Label({"ID": "minimaxCloneVoiceNameLabel","Text": "Name", "Weight": 0.2}),
-                    ui.LineEdit({"ID": "minimaxCloneVoiceName", "Weight": 0.8})
-                ]),
-                ui.HGroup({"Weight": 0.1}, [
-                    ui.Label({"ID": "minimaxCloneVoiceIDLabel","Text": "ID", "Weight": 0.2}),
-                    ui.LineEdit({"ID": "minimaxCloneVoiceID", "Weight": 0.8}),
-                ]),
-                 ui.HGroup({"Weight": 0.1}, [
-                    ui.Label({"ID": "minimaxCloneFileIDLabel","Text": "File ID", "Weight": 0.2}),
-                    ui.LineEdit({"ID": "minimaxCloneFileID", "Enabled" : False ,"Weight": 0.8}),
-                ]),
-               
-                ui.HGroup({"Weight": 0.1}, [
-                    ui.CheckBox({"ID": "minimaxNeedNoiseReduction", "Text": "是否开启降噪", "Checked": False, "Alignment": {"AlignLeft": True}, "Weight": 0.1}),
-                    ui.CheckBox({"ID": "minimaxNeedVolumeNormalization", "Text": "音量归一化", "Checked": False, "Alignment": {"AlignLeft": True}, "Weight": 0.1}),
-                ]),
-                ui.Label({"ID": "minimaxCloneStatus","Text": "", "Weight": 0.2}),
-                
-                
-                ui.HGroup({"Weight": 0.1}, [
-                    ui.Button({"ID": "MiniMaxCloneConfirm", "Text": "添加","Weight": 1}),
-                    ui.Button({"ID": "MiniMaxCloneCancel", "Text": "取消","Weight": 1}),
-                ]),
-                
-                
+                ui.VGroup({"Weight": 1, "Spacing": 10,},
+                    [
+                        
+                        #ui.TextEdit({"ID": "minimaxCloneGuide", "Text": "", "ReadOnly": True, "Font": ui.Font({"PixelSize": 14})}),
+                        
+                        ui.CheckBox({"ID": "minimaxOnlyAddID", "Text": "已有克隆音色", "Checked": True, "Alignment": {"AlignRight": True}, "Weight": 0.1}),
+                        ui.HGroup({"Weight": 0.1}, [
+                            ui.Label({"ID": "minimaxCloneVoiceNameLabel","Text": "Name", "Weight": 0.2}),
+                            ui.LineEdit({"ID": "minimaxCloneVoiceName", "Weight": 0.8})
+                        ]),
+                        ui.HGroup({"Weight": 0.1}, [
+                            ui.Label({"ID": "minimaxCloneVoiceIDLabel","Text": "ID", "Weight": 0.2}),
+                            ui.LineEdit({"ID": "minimaxCloneVoiceID", "Weight": 0.8}),
+                        ]),
+                        ui.HGroup({"Weight": 0.1}, [
+                            ui.Label({"ID": "minimaxCloneFileIDLabel","Text": "File ID", "Weight": 0.2}),
+                            ui.LineEdit({"ID": "minimaxCloneFileID", "Enabled" : False ,"Weight": 0.8}),
+                        ]),
+                    
+                        ui.HGroup({"Weight": 0.1}, [
+                            ui.CheckBox({"ID": "minimaxNeedNoiseReduction", "Text": "是否开启降噪", "Checked": False, "Alignment": {"AlignLeft": True}, "Weight": 0.1}),
+                            ui.CheckBox({"ID": "minimaxNeedVolumeNormalization", "Text": "音量归一化", "Checked": False, "Alignment": {"AlignLeft": True}, "Weight": 0.1}),
+                        ]),
+                        ui.Label({"ID": "minimaxClonePreviewLabel","Text": "输入试听文本(限制300字以内)：", "Weight": 0.2}),
+                        ui.TextEdit({"ID": "minimaxClonePreviewText", "Text": "", }),
+                        
+                           
+                    ]
+                ),
+                ui.VGroup( {"Weight": 1, "Spacing": 10},
+                    [
+                        ui.HGroup({"Weight": 1}, [
+                            ui.TextEdit({"ID": "minimaxcloneinfoTxt", "Text": clone_info_cn, "ReadOnly": True, "Font": ui.Font({"PixelSize": 14})})
+                        ])
+                    ]
+                ),
             ]
-        )
+        ),
+        ui.HGroup({"Weight": 0.1}, [
+                ui.Label({"ID": "minimaxCloneStatus","Text": "", "Weight": 0.2}),
+        ]),
+        ui.HGroup({"Weight": 0.1}, [
+                            ui.Button({"ID": "MiniMaxCloneConfirm", "Text": "添加","Weight": 1}),
+                            ui.Button({"ID": "MiniMaxCloneCancel", "Text": "取消","Weight": 1}),
+                        ]),  
+
     ]
+    )
 )
 
 translations = {
     "cn": {
-        "Tabs": ["微软语音", "海螺语音", "OpenAI 语音","配置"],
+        "Tabs": ["微软语音", "MiniMax语音", "OpenAI 语音","配置"],
         "GetSubButton": "从时间线获取字幕",
         "minimaxGetSubButton": "从时间线获取字幕",
         "OpenAIGetSubButton": "从时间线获取字幕",
@@ -1009,14 +1237,16 @@ translations = {
         "AzureConfirm":"确定",
         "AzureRegisterButton":"注册",
         "minimaxLabel":"填写MiniMax API信息",
-        "minimaxCloneLabel":"添加 海螺AI 克隆音色",
-        "minimaxCloneGuide":"9.9元/音色。\n\n获得复刻音色时，不会立即收取音色复刻费用。\n\n音色的复刻费用将在首次使用此复刻音色进行语音合成时收取。",
+        "minimaxCloneLabel":"添加 MiniMaxAI 克隆音色",
+        #"minimaxCloneGuide":"9.9元/音色。\n\n获得复刻音色时，不会立即收取音色复刻费用。\n\n音色的复刻费用将在首次使用此复刻音色进行语音合成时收取。",
         "minimaxCloneVoiceNameLabel":"音色名字",
         "minimaxCloneVoiceIDLabel":"音色 ID",
         "minimaxOnlyAddID":"已有克隆音色ID（在下方填入添加即可）",
         "minimaxCloneFileIDLabel":"音频 ID",
         "minimaxNeedNoiseReduction":"开启降噪",
         "minimaxNeedVolumeNormalization":"音量统一",
+        "minimaxClonePreviewLabel":"输入试听文本(限制300字以内)：",
+        "minimaxcloneinfoTxt":clone_info_cn,
         "minimaxApiKeyLabel":"密钥",
         "intlCheckBox": "海外",
         "MiniMaxConfirm":"确定",
@@ -1096,13 +1326,15 @@ translations = {
         "minimaxLabel":"MiniMax API",
         "minimaxCloneLabel":"Add MiniMax Clone Voice",
         "minimaxCloneVoiceNameLabel":"Voice Name",
-        "minimaxCloneGuide":"$3 per voice. \n\nYou won’t be charged for cloning a voice right away \n\n the cloning fee will only be charged the first time you use that cloned voice for speech synthesis.",
+        #"minimaxCloneGuide":"$3 per voice. \n\nYou won’t be charged for cloning a voice right away \n\n the cloning fee will only be charged the first time you use that cloned voice for speech synthesis.",
         "minimaxCloneVoiceIDLabel":"Voice ID",
         "minimaxCloneFileIDLabel":"File ID",
         "minimaxOnlyAddID":"I already have a clone voice.(just fill in below).",
         "minimaxNeedNoiseReduction":"Noise Reduction",
         "minimaxNeedVolumeNormalization":"Volume Normalization",
+        "minimaxClonePreviewLabel":"Input text for cloned voice preview:\n(Limited to 2000 characters. )",
         "minimaxApiKeyLabel":"Key",
+        "minimaxcloneinfoTxt":clone_info_en,
         "intlCheckBox": "intl",
         "MiniMaxConfirm":"OK",
         "MiniMaxCloneConfirm":"Add",
@@ -1849,6 +2081,7 @@ def on_minimax_only_add_id_checkbox_clicked(ev):
     checked = minimax_clone_items["minimaxOnlyAddID"].Checked
     minimax_clone_items["minimaxNeedNoiseReduction"].Enabled = not minimax_clone_items["minimaxOnlyAddID"].Checked
     minimax_clone_items["minimaxNeedVolumeNormalization"].Enabled = not minimax_clone_items["minimaxOnlyAddID"].Checked
+    minimax_clone_items["minimaxClonePreviewText"].Enabled = not minimax_clone_items["minimaxOnlyAddID"].Checked
     if items["LangEnCheckBox"].Checked:
         minimax_clone_items["MiniMaxCloneConfirm"].Text = "Add" if checked else "Clone"
     else:
@@ -3096,7 +3329,7 @@ win.On.ShowMiniMax.Clicked = on_show_minimax
 def on_show_minimax_clone(ev):
     minimax_clone_items["minimaxNeedNoiseReduction"].Enabled = not minimax_clone_items["minimaxOnlyAddID"].Checked
     minimax_clone_items["minimaxNeedVolumeNormalization"].Enabled = not minimax_clone_items["minimaxOnlyAddID"].Checked
-
+    minimax_clone_items["minimaxClonePreviewText"].Enabled = not minimax_clone_items["minimaxOnlyAddID"].Checked
     minimax_clone_window.Show()
 win.On.ShowMiniMaxClone.Clicked = on_show_minimax_clone
 
@@ -3146,40 +3379,54 @@ def minimax_upload_file(api_key, group_id, file_path,intl=False):
     else:
         raise Exception(f"文件上传失败: {response_data}")
 
-def minimax_submit_voice_clone(api_key, group_id, file_id, voice_id,need_noise_reduction,need_volume_normalization,intl=False):
+def minimax_submit_voice_clone(api_key, group_id, file_id, voice_id, need_noise_reduction, need_volume_normalization, text, intl=False):
     """
     提交克隆请求
     :param api_key: API 访问密钥
     :param group_id: 组 ID
     :param file_id: 上传的文件 ID
     :param voice_id: 目标声音 ID
+    :param need_noise_reduction: 是否降噪
+    :param need_volume_normalization: 是否音量归一化
+    :param text: 克隆文本（可为空）
+    :param intl: 是否为国际接口
     :return: API 响应
     """
-    minimax_clone_items["minimaxCloneStatus"].Text = f"Clone..."
-    if intl :
-        url = f'https://api.minimaxi.chat/v1/voice_clone?GroupId={group_id}'
-    else:
-        url = f'https://api.minimax.chat/v1/voice_clone?GroupId={group_id}'
-    payload = json.dumps({
+    minimax_clone_items["minimaxCloneStatus"].Text = "Clone..."
+
+    # 接口 URL
+    url = f'https://api.minimax.chat/v1/voice_clone?GroupId={group_id}' if not intl else f'https://api.minimaxi.chat/v1/voice_clone?GroupId={group_id}'
+
+    # 构造请求体
+    payload_dict = {
         "file_id": file_id,
         "voice_id": voice_id,
-        "need_noise_reduction":need_noise_reduction,
-        "need_volume_normalization":need_volume_normalization,
-        #"text":text,
-        #"model":model
-    })
+        "need_noise_reduction": need_noise_reduction,
+        "need_volume_normalization": need_volume_normalization
+    }
+
+    # 若 text 不为空，则加入 text 和 model 参数
+    if text.strip() != "":
+        payload_dict["text"] = text
+        payload_dict["model"] = "speech-02-hd"
+
+    payload = json.dumps(payload_dict)
     print(payload)
+
     headers = {
         'Authorization': f'Bearer {api_key}',
         'Content-Type': 'application/json'
     }
+
     try:
         response = requests.post(url, headers=headers, data=payload)
     except Exception as e:
-        minimax_clone_items["minimaxCloneStatus"].Text = f"error:{e}"
+        minimax_clone_items["minimaxCloneStatus"].Text = f"error: {e}"
         print("发生错误:", e)
         return
+    
     return response.json()
+
 
 def add_clone_voice(
     voice_file: str,
@@ -3235,7 +3482,50 @@ def add_clone_voice(
     
     show_warning_message(STATUS_MESSAGES.add_clone_succeed)
     return updated_clone_voices
+
+def download_clone_demo(data, items, voice_id):
+    """
+    从已解析的 JSON 数据中判断并下载 demo_audio（如果存在）。
+
+    参数：
+    - data: dict，已解析的接口返回 JSON 数据
+    - items: 包含 Path 文本的字典，例如 {'Path': {'Text': '/some/local/dir'}}
+    - current_timeline: 提供 GetUniqueId() 方法，生成唯一 ID。
+
+    返回：
+    - 下载后的本地文件路径，或 None（如果没有 demo_audio）。
+    """
+
+    # 1. 判断是否包含 demo_audio 字段
+    demo_url = data.get("demo_audio")
+    if not demo_url:
+        print("响应中未包含 demo_audio，无需下载。")
+        return None
+
+    # 2. 构造本地文件名和保存路径
+    filename = f"preview_{voice_id}.mp3"
+    save_dir = items["Path"].Text
+    os.makedirs(save_dir, exist_ok=True)
+    local_path = os.path.join(save_dir, filename)
+
+    # 3. 发起下载请求
+    try:
+        resp = requests.get(demo_url, stream=True, timeout=30)
+        resp.raise_for_status()
+    except requests.RequestException as e:
+        raise RuntimeError(f"下载 demo_audio 失败：{e}")
+
+    # 4. 将内容写入文件
+    with open(local_path, "wb") as f:
+        for chunk in resp.iter_content(chunk_size=8192):
+            if chunk:
+                f.write(chunk)
+
+    print(f"Successful download preview_{voice_id} into：{local_path}")
+    return local_path
+
 file_id = None
+
 def on_minimax_clone_confirm(ev):
     global file_id
     if minimax_items["minimaxGroupID"].Text == '' or minimax_items["minimaxApiKey"].Text == '':
@@ -3247,7 +3537,8 @@ def on_minimax_clone_confirm(ev):
     voice_id   = minimax_clone_items["minimaxCloneVoiceID"].Text.strip()
     need_noise_reduction = minimax_clone_items["minimaxNeedNoiseReduction"].Checked
     need_volume_normalization = minimax_clone_items["minimaxNeedVolumeNormalization"].Checked
-    
+    preview_text = minimax_clone_items["minimaxClonePreviewText"].PlainText.strip()
+
     if not voice_name or not voice_id:
         show_warning_message(STATUS_MESSAGES.clone_voices_error1)
         return
@@ -3269,20 +3560,27 @@ def on_minimax_clone_confirm(ev):
         checked = minimax_items["intlCheckBox"].Checked
 
         if file_id:
-            clone_response = minimax_submit_voice_clone(api_key, group_id, file_id, voice_id,need_noise_reduction,need_volume_normalization,checked)
+            clone_response = minimax_submit_voice_clone(api_key, group_id, file_id, voice_id,need_noise_reduction,need_volume_normalization,preview_text,checked)
+            filename=download_clone_demo(clone_response, items, voice_id)
+            add_to_media_pool_and_timeline(current_timeline.GetStartFrame(), current_timeline.GetEndFrame(), filename)
             print("克隆请求响应:", clone_response)
         else:
             file_path = render_audio_by_marker(items["Path"].Text)
-            print("clone file path:",file_path)
-
+            print("clone audio export success! file path:",file_path)
+            if os.path.exists(file_path):
+                file_size = os.path.getsize(file_path)
+                if file_size > 20 * 1024 * 1024:
+                    show_warning_message(STATUS_MESSAGES.file_size)
+                    return
             try:
                 
                 file_id = minimax_upload_file(api_key, group_id, file_path,checked)
-                print("上传成功，file_id:", file_id)
+                print("clone audio uploud success!file_id:", file_id)
                 minimax_clone_items["minimaxCloneFileID"].Text = str(file_id)
-
-                clone_response = minimax_submit_voice_clone(api_key, group_id, file_id, voice_id,need_noise_reduction,need_volume_normalization,checked)
-                print("克隆请求响应:", clone_response)
+                clone_response = minimax_submit_voice_clone(api_key, group_id, file_id, voice_id,need_noise_reduction,need_volume_normalization,preview_text,checked)
+                filename=download_clone_demo(clone_response, items, voice_id)
+                add_to_media_pool_and_timeline(current_timeline.GetStartFrame(), current_timeline.GetEndFrame(), filename)
+                print("clone audio success!response:", clone_response)
             except Exception as e:
                 minimax_clone_items["minimaxCloneStatus"].Text = f"error:{e}"
                 print("发生错误:", e)
@@ -3303,12 +3601,8 @@ def on_minimax_clone_confirm(ev):
             else:
                 # 错误处理
                 minimax_clone_items["minimaxCloneStatus"].Text = f"error:{clone_response.get('base_resp', {}).get('status_msg')}"
-        
-    
-
 
 minimax_clone_window.On.MiniMaxCloneConfirm.Clicked = on_minimax_clone_confirm
-
 
 def on_minimax_clone_close(ev):
     global file_id
