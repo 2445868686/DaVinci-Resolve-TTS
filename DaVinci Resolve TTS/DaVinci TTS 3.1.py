@@ -461,7 +461,7 @@ import re
 import wave
 import subprocess
 import json
-from typing import Dict, Any, List
+from typing import Dict, Any, List,Optional
 import edge_tts
 import azure.cognitiveservices.speech as speechsdk
 try:
@@ -683,8 +683,14 @@ def render_audio_by_marker(output_dir):
     job_id = current_project.AddRenderJob()
     render_result = current_project.StartRendering([job_id])
     while current_project.IsRenderingInProgress():
-        minimax_clone_items["minimaxCloneStatus"].Text = f"Rendering ..."
+        minimax_clone_items["minimaxCloneStatus"].Text = f"Rendering "
         time.sleep(1)  # 等待 1 秒再检查
+        minimax_clone_items["minimaxCloneStatus"].Text = f"Rendering ."
+        time.sleep(1)
+        minimax_clone_items["minimaxCloneStatus"].Text = f"Rendering .."
+        time.sleep(1)
+        minimax_clone_items["minimaxCloneStatus"].Text = f"Rendering ..."
+        time.sleep(1)
     clone_filename = f"{filename}.mp3"
     clone_file_path = os.path.join(output_dir, clone_filename)
 
@@ -3351,83 +3357,86 @@ def on_minimax_close(ev):
 minimax_config_window.On.MiniMaxConfirm.Clicked = on_minimax_close
 minimax_config_window.On.MiniMaxConfigWin.Close = on_minimax_close
 
-def minimax_upload_file(api_key, group_id, file_path,intl=False):
-    """
-    上传音频文件并获取 file_id
-    :param api_key: API 访问密钥
-    :param group_id: 组 ID
-    :param file_path: 音频文件路径
-    :return: file_id
-    """
-    minimax_clone_items["minimaxCloneStatus"].Text = f"Upload..."
-    if intl :
-        url = f'https://api.minimaxi.chat/v1/files/upload?GroupId={group_id}'
-    else:
-        url = f'https://api.minimax.chat/v1/files/upload?GroupId={group_id}'
-    headers = {
-        'Authorization': f'Bearer {api_key}'
-    }
-    data = {'purpose': 'voice_clone'}
-    files = {'file': open(file_path, 'rb')}
+class MinimaxVoiceCloner:
+    BASE_URL = "https://api.minimax.chat"
+    BASE_URL_INTL = "https://api.minimaxi.chat"
+    UPLOAD_PATH = "/v1/files/upload"
+    CLONE_PATH = "/v1/voice_clone"
+    def __init__(self,
+                 api_key: str,
+                 group_id: str,
+                 voice_file: str,
+                 items: Dict[str, Any],
+                 intl: bool = False):
+        self.api_key = api_key
+        self.group_id = group_id
+        self.base_url = self.BASE_URL_INTL if intl else self.BASE_URL
+        self.voice_file = voice_file
+        self.items = items
+        self.file_id = None
+    def _make_url(self, path: str) -> str:
+        return f"{self.base_url}{path}?GroupId={self.group_id}"
+
+    def upload_file(self, file_path: str) -> str:
+        print("Upload File ...")
+        url =  self._make_url(self.UPLOAD_PATH)
+        headers = {'Authorization': f'Bearer {self.api_key}'}
+        data = {'purpose': 'voice_clone'}
+        with open(file_path, 'rb') as f:
+            files = {'file': f}
+            resp = requests.post(url, headers=headers, data=data, files=files)
+        resp.raise_for_status()
+        resp_data = resp.json()
+        print(resp_data)
+        if resp.status_code==200 and "file" in resp_data:
+            self.file_id = resp_data["file"].get("file_id")
+            return self.file_id
+        else:
+            raise RuntimeError(f"文件上传失败: {resp_data}")
+
+    def submit_clone(self,
+                     voice_id: str,
+                     need_noise_reduction: bool,
+                     need_volume_normalization: bool,
+                     text: str) -> dict:
+        print("Clone File ...")
+        url =  self._make_url(self.CLONE_PATH)
+        payload = {
+            "file_id": self.file_id,
+            "voice_id": voice_id,
+            "need_noise_reduction": need_noise_reduction,
+            "need_volume_normalization": need_volume_normalization
+        }
+        if text.strip():
+            payload["text"] = text
+            payload["model"] = "speech-02-hd"
+        headers = {
+            'Authorization': f'Bearer {self.api_key}',
+            'Content-Type': 'application/json'
+        }
+        print(payload)
+        resp = requests.post(url, headers=headers, json=payload)
+        resp.raise_for_status()
+        return resp.json()
+
+    def download_demo(self,
+                      data: dict,
+                      save_dir: str,
+                      voice_id: str) -> Optional[str]:
+        print("Download Preview Audio ...")
+        demo_url = data.get("demo_audio")
+        if not demo_url:
+            return None
+        os.makedirs(save_dir, exist_ok=True)
+        local_path = os.path.join(save_dir, f"preview_{voice_id}.mp3")
+        resp = requests.get(demo_url, stream=True, timeout=30)
+        resp.raise_for_status()
+        with open(local_path, 'wb') as f:
+            for chunk in resp.iter_content(8192):
+                f.write(chunk)
+        return local_path
+
     
-    response = requests.post(url, headers=headers, data=data, files=files)
-    response_data = response.json()
-    
-
-    if response.status_code == 200 and "file" in response_data:
-        return response_data["file"].get("file_id")
-    else:
-        raise Exception(f"文件上传失败: {response_data}")
-
-def minimax_submit_voice_clone(api_key, group_id, file_id, voice_id, need_noise_reduction, need_volume_normalization, text, intl=False):
-    """
-    提交克隆请求
-    :param api_key: API 访问密钥
-    :param group_id: 组 ID
-    :param file_id: 上传的文件 ID
-    :param voice_id: 目标声音 ID
-    :param need_noise_reduction: 是否降噪
-    :param need_volume_normalization: 是否音量归一化
-    :param text: 克隆文本（可为空）
-    :param intl: 是否为国际接口
-    :return: API 响应
-    """
-    minimax_clone_items["minimaxCloneStatus"].Text = "Clone..."
-
-    # 接口 URL
-    url = f'https://api.minimax.chat/v1/voice_clone?GroupId={group_id}' if not intl else f'https://api.minimaxi.chat/v1/voice_clone?GroupId={group_id}'
-
-    # 构造请求体
-    payload_dict = {
-        "file_id": file_id,
-        "voice_id": voice_id,
-        "need_noise_reduction": need_noise_reduction,
-        "need_volume_normalization": need_volume_normalization
-    }
-
-    # 若 text 不为空，则加入 text 和 model 参数
-    if text.strip() != "":
-        payload_dict["text"] = text
-        payload_dict["model"] = "speech-02-hd"
-
-    payload = json.dumps(payload_dict)
-    print(payload)
-
-    headers = {
-        'Authorization': f'Bearer {api_key}',
-        'Content-Type': 'application/json'
-    }
-
-    try:
-        response = requests.post(url, headers=headers, data=payload)
-    except Exception as e:
-        minimax_clone_items["minimaxCloneStatus"].Text = f"error: {e}"
-        print("发生错误:", e)
-        return
-    
-    return response.json()
-
-
 def add_clone_voice(
     voice_file: str,
     voice_name: str,
@@ -3483,69 +3492,29 @@ def add_clone_voice(
     show_warning_message(STATUS_MESSAGES.add_clone_succeed)
     return updated_clone_voices
 
-def download_clone_demo(data, items, voice_id):
-    """
-    从已解析的 JSON 数据中判断并下载 demo_audio（如果存在）。
-
-    参数：
-    - data: dict，已解析的接口返回 JSON 数据
-    - items: 包含 Path 文本的字典，例如 {'Path': {'Text': '/some/local/dir'}}
-    - current_timeline: 提供 GetUniqueId() 方法，生成唯一 ID。
-
-    返回：
-    - 下载后的本地文件路径，或 None（如果没有 demo_audio）。
-    """
-
-    # 1. 判断是否包含 demo_audio 字段
-    demo_url = data.get("demo_audio")
-    if not demo_url:
-        print("响应中未包含 demo_audio，无需下载。")
-        return None
-
-    # 2. 构造本地文件名和保存路径
-    filename = f"preview_{voice_id}.mp3"
-    save_dir = items["Path"].Text
-    os.makedirs(save_dir, exist_ok=True)
-    local_path = os.path.join(save_dir, filename)
-
-    # 3. 发起下载请求
-    try:
-        resp = requests.get(demo_url, stream=True, timeout=30)
-        resp.raise_for_status()
-    except requests.RequestException as e:
-        raise RuntimeError(f"下载 demo_audio 失败：{e}")
-
-    # 4. 将内容写入文件
-    with open(local_path, "wb") as f:
-        for chunk in resp.iter_content(chunk_size=8192):
-            if chunk:
-                f.write(chunk)
-
-    print(f"Successful download preview_{voice_id} into：{local_path}")
-    return local_path
-
-file_id = None
-
 def on_minimax_clone_confirm(ev):
-    global file_id
-    if minimax_items["minimaxGroupID"].Text == '' or minimax_items["minimaxApiKey"].Text == '':
+    # 1. 参数检查
+    if not (minimax_items["minimaxGroupID"].Text and minimax_items["minimaxApiKey"].Text):
         show_warning_message(STATUS_MESSAGES.enter_api_key)
         return
+    global minimax_clone_voices  # 声明我们要更新的全局变量
+    # 2. 读取通用参数
     group_id = minimax_items["minimaxGroupID"].Text
-    api_key = minimax_items["minimaxApiKey"].Text
+    api_key  = minimax_items["minimaxApiKey"].Text
+    intl     = minimax_items["intlCheckBox"].Checked
     voice_name = minimax_clone_items["minimaxCloneVoiceName"].Text.strip()
     voice_id   = minimax_clone_items["minimaxCloneVoiceID"].Text.strip()
-    need_noise_reduction = minimax_clone_items["minimaxNeedNoiseReduction"].Checked
-    need_volume_normalization = minimax_clone_items["minimaxNeedVolumeNormalization"].Checked
+    need_nr    = minimax_clone_items["minimaxNeedNoiseReduction"].Checked
+    need_vn    = minimax_clone_items["minimaxNeedVolumeNormalization"].Checked
     preview_text = minimax_clone_items["minimaxClonePreviewText"].PlainText.strip()
 
-    if not voice_name or not voice_id:
-        show_warning_message(STATUS_MESSAGES.clone_voices_error1)
-        return
-    
-    global minimax_clone_voices  # 声明我们要更新的全局变量
-    
-    if  minimax_clone_items["minimaxOnlyAddID"].Checked:
+    # 3. 初始化或复用封装好的类
+    cloner = MinimaxVoiceCloner(api_key, group_id,
+                                voice_file,
+                                items, intl)
+
+    # 4. 只添加 ID
+    if minimax_clone_items["minimaxOnlyAddID"].Checked:
         minimax_clone_voices = add_clone_voice(
             voice_file=voice_file,
             voice_name=voice_name,
@@ -3555,58 +3524,52 @@ def on_minimax_clone_confirm(ev):
             minimax_voices=minimax_voices,
             lang_en_checked=items["LangEnCheckBox"].Checked
         )
-        
-    else:
-        checked = minimax_items["intlCheckBox"].Checked
+        return
 
-        if file_id:
-            clone_response = minimax_submit_voice_clone(api_key, group_id, file_id, voice_id,need_noise_reduction,need_volume_normalization,preview_text,checked)
-            filename=download_clone_demo(clone_response, items, voice_id)
-            add_to_media_pool_and_timeline(current_timeline.GetStartFrame(), current_timeline.GetEndFrame(), filename)
-            print("克隆请求响应:", clone_response)
-        else:
-            file_path = render_audio_by_marker(items["Path"].Text)
-            print("clone audio export success! file path:",file_path)
-            if os.path.exists(file_path):
-                file_size = os.path.getsize(file_path)
-                if file_size > 20 * 1024 * 1024:
-                    show_warning_message(STATUS_MESSAGES.file_size)
-                    return
-            try:
-                
-                file_id = minimax_upload_file(api_key, group_id, file_path,checked)
-                print("clone audio uploud success!file_id:", file_id)
-                minimax_clone_items["minimaxCloneFileID"].Text = str(file_id)
-                clone_response = minimax_submit_voice_clone(api_key, group_id, file_id, voice_id,need_noise_reduction,need_volume_normalization,preview_text,checked)
-                filename=download_clone_demo(clone_response, items, voice_id)
-                add_to_media_pool_and_timeline(current_timeline.GetStartFrame(), current_timeline.GetEndFrame(), filename)
-                print("clone audio success!response:", clone_response)
-            except Exception as e:
-                minimax_clone_items["minimaxCloneStatus"].Text = f"error:{e}"
-                print("发生错误:", e)
-                return
-            
-            if clone_response.get("base_resp", {}).get("status_code") == 0:
-                # 调用通用函数
-                minimax_clone_voices = add_clone_voice(
-                    voice_file=voice_file,
-                    voice_name=voice_name,
-                    voice_id=voice_id,
-                    items=items,
-                    minimax_clone_voices=minimax_clone_voices,
-                    minimax_voices=minimax_voices,
-                    lang_en_checked=items["LangEnCheckBox"].Checked
-                )
-                minimax_clone_items["minimaxCloneStatus"].Text = "克隆成功！"
-            else:
-                # 错误处理
-                minimax_clone_items["minimaxCloneStatus"].Text = f"error:{clone_response.get('base_resp', {}).get('status_msg')}"
+    # 5. 先 ensure file_id
+    if minimax_clone_items["minimaxCloneFileID"].Text == "":
+        file_path = render_audio_by_marker(items["Path"].Text)
+        print(f"file_path:{file_path}")
+        minimax_clone_items["minimaxCloneStatus"].Text = f"Upload File ..."
+        cloner.upload_file(file_path)
+        print(f"file_id:{cloner.file_id}")
+        minimax_clone_items["minimaxCloneFileID"].Text = str(cloner.file_id)
+    else:
+        cloner.file_id = int(minimax_clone_items["minimaxCloneFileID"].Text)
+
+    # 6. 提交克隆并下载 demo
+    minimax_clone_items["minimaxCloneStatus"].Text = f"Clone File ..."
+    resp = cloner.submit_clone(voice_id, need_nr, need_vn, preview_text)
+    print(f"response:{resp}")
+
+    # 7. 如果成功，再把声音写入列表
+    if resp.get("base_resp", {}).get("status_code") == 0:
+        save_dir = items["Path"].Text
+        minimax_clone_items["minimaxCloneStatus"].Text = f"Download Preview Audio ..."
+        demo_path = cloner.download_demo(resp, save_dir, voice_id)
+        add_to_media_pool_and_timeline(
+            current_timeline.GetStartFrame(),
+            current_timeline.GetEndFrame(),
+            demo_path
+        )
+        minimax_clone_voices = add_clone_voice(
+            voice_file=voice_file,
+            voice_name=voice_name,
+            voice_id=voice_id,
+            items=items,
+            minimax_clone_voices=minimax_clone_voices,
+            minimax_voices=minimax_voices,
+            lang_en_checked=items["LangEnCheckBox"].Checked
+        )
+        minimax_clone_items["minimaxCloneStatus"].Text = "Clone Successful!"
+    else:
+        msg = resp.get("base_resp", {}).get("status_msg")
+        minimax_clone_items["minimaxCloneStatus"].Text = f"ERROR:{msg}"
+
 
 minimax_clone_window.On.MiniMaxCloneConfirm.Clicked = on_minimax_clone_confirm
 
 def on_minimax_clone_close(ev):
-    global file_id
-    file_id = None
     minimax_clone_items["minimaxCloneFileID"].Text = ""
     minimax_clone_window.Hide()
 minimax_clone_window.On.MiniMaxCloneWin.Close = on_minimax_clone_close
