@@ -455,6 +455,8 @@ import xml.etree.ElementTree as ET
 import sys
 import os
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
 import time
 import webbrowser
 import re
@@ -464,6 +466,18 @@ import json
 from typing import Dict, Any, List,Optional
 import edge_tts
 import azure.cognitiveservices.speech as speechsdk
+
+# 创建带重试机制的 session（放在模块初始化，整个脚本共享）
+session = requests.Session()
+retries = Retry(
+    total=3,                 # 最多重试3次
+    backoff_factor=0.5,       # 每次重试等待时间逐步增加
+    status_forcelist=[500, 502, 503, 504],  # 服务器错误才重试
+    allowed_methods=["GET", "POST"]         # 限定方法
+)
+session.mount('http://', HTTPAdapter(max_retries=retries))
+session.mount('https://', HTTPAdapter(max_retries=retries))
+
 try:
     import DaVinciResolveScript as dvr_script
     from python_get_resolve import GetResolve
@@ -511,6 +525,7 @@ class STATUS_MESSAGES:
     file_size           =("Exported file exceeds 20MB and may not be uploadable!","导出文件超过 20MB，可能无法上传！")
     duration_seconds    =("Marks During should be between 10 seconds and 5 minutes!","标记长度应在10秒到5分钟之间！")
     insert_mark         = ("Please use Mark points to indicate the reference audio range first!","请先使用Mark点标记参考音频范围！")
+    prev_txt            = ("Please enter the audition text in the text box!","请在文本框输入试听文本！")
 def check_or_create_file(file_path):
     if os.path.exists(file_path):
         pass
@@ -622,6 +637,7 @@ def get_first_empty_track(timeline, start_frame, end_frame, media_type):
             return track_index
         
         track_index += 1
+        
 def render_audio_by_marker(output_dir):
     """
     使用当前Project、当前Timeline的第一个Marker，导出相应区段的音频（单一剪辑模式）。
@@ -758,6 +774,56 @@ def add_to_media_pool_and_timeline(start_frame, end_frame, filename):
     else:
         print("Failed to append clip to timeline.")
 
+def import_srt_to_timeline(srt_path):
+    """
+    将指定 .srt 文件导入并追加到当前时间线。
+    返回 True 表示成功，False 表示失败。
+    """
+    # 1. 获取 Resolve、ProjectManager、Project、Timeline
+    project_manager = resolve.GetProjectManager()
+    current_project = project_manager.GetCurrentProject()
+    if current_project is None:
+        print("错误：未找到当前项目")
+        return False
+
+    timeline = current_project.GetCurrentTimeline()
+    if timeline is None:
+        print("错误：未找到当前时间线")
+        return False
+
+    # 2. 删除所有“subtitle”轨道中的片段
+    sub_count = timeline.GetTrackCount("subtitle")
+    for ti in range(1, sub_count + 1):
+        items = timeline.GetItemListInTrack("subtitle", ti)
+        if items:
+            timeline.DeleteClips(items)  # 删除指定轨道上的片段&#8203;:contentReference[oaicite:6]{index=6}&#8203;:contentReference[oaicite:7]{index=7}
+
+    # 3. 导入 .srt 到媒体池
+    media_pool = current_project.GetMediaPool()
+    root_folder = media_pool.GetRootFolder()
+    media_pool.SetCurrentFolder(root_folder)
+
+    # 可选：删除媒体池中同名旧条目，避免重复
+    file_name = os.path.basename(srt_path)
+    for clip in root_folder.GetClipList():
+        if clip.GetName() == file_name:
+            media_pool.DeleteClips([clip])
+            break
+
+    imported = media_pool.ImportMedia([srt_path])  # 导入 .srt&#8203;:contentReference[oaicite:8]{index=8}&#8203;:contentReference[oaicite:9]{index=9}
+    if not imported:
+        print(f"错误：字幕文件导入失败 -> {srt_path}")
+        return False
+
+    # 4. 将导入的字幕追加到时间线
+    new_clip = imported[0]
+    success = media_pool.AppendToTimeline([new_clip])  # 追加到时间线&#8203;:contentReference[oaicite:10]{index=10}&#8203;:contentReference[oaicite:11]{index=11}
+    if not success:
+        print("错误：将字幕添加到时间线失败")
+        return False
+
+    print(f"字幕已成功加载到时间线: {file_name}")
+    return True
 
 ui = fusion.UIManager
 dispatcher = bmd.UIDispatcher(ui)
@@ -794,7 +860,7 @@ win = dispatcher.AddWindow({
                                 
                             ])
                         ]),
-                        ui.VGroup({"Weight": 0.1}, [
+                        ui.VGroup({"Weight": 1}, [
                             ui.HGroup({"Weight": 0.1}, [
                                 ui.Button({"ID": "AlphabetButton", "Text": "发音", "Weight": 1}),
                             ]),
@@ -807,6 +873,7 @@ win = dispatcher.AddWindow({
                             ui.HGroup({"Weight": 0.1}, [
                                 ui.Label({"ID": "NameLabel", "Text": "名称", "Alignment": {"AlignRight": False}, "Weight": 0.2}),
                                 ui.ComboBox({"ID": "NameCombo", "Text": "", "Weight": 0.8}),
+                                ui.Button({"ID": "PlayButton", "Text": "播放预览"}),
                                 ui.Label({"ID": "MultilingualLabel", "Text": "语言技能", "Alignment": {"AlignRight": False}, "Weight": 0.2}),
                                 ui.ComboBox({"ID": "MultilingualCombo", "Text": "", "Weight": 0.2})
                             ]),
@@ -839,7 +906,6 @@ win = dispatcher.AddWindow({
                                 ui.ComboBox({"ID": "OutputFormatCombo", "Text": "Output_Format", "Weight": 0.8})
                             ]),
                             ui.HGroup({"Weight": 0.1}, [
-                                ui.Button({"ID": "PlayButton", "Text": "播放预览"}),
                                 ui.Button({"ID": "FromSubButton", "Text": "朗读当前字幕"}),
                                 ui.Button({"ID": "FromTxtButton", "Text": "朗读文本框"}),
                                 ui.Button({"ID": "ResetButton", "Text": "重置"})
@@ -872,7 +938,8 @@ win = dispatcher.AddWindow({
                                 ui.Label({"ID": "minimaxVoiceLabel","Text": "音色:", "Weight": 0}),
                                 ui.ComboBox({"ID": "minimaxVoiceCombo", "Text": "选择人声"}),
                                 ui.Button({"ID": "minimaxPreviewButton", "Text": "试听"}),
-                                ui.Button({"ID": "ShowMiniMaxClone", "Text": "添加克隆音色"}),
+                                ui.Button({"ID": "ShowMiniMaxClone", "Text": "删除音色"}),
+                                ui.Button({"ID": "minimaxDeleteVoice", "Text": "删除音色"}),
                             ]),
                             ui.HGroup({}, [
                                 ui.Label({"ID": "minimaxEmotionLabel","Text": "情绪:", "Weight": 0}),
@@ -1216,7 +1283,7 @@ translations = {
         "OutputFormatLabel": "格式",
         "minimaxFormatLabel": "格式",
         "OpenAIFormatLabel": "格式",
-        "PlayButton": "播放预览",
+        "PlayButton": "试听",
         "FromSubButton": "朗读当前字幕",
         "OpenAIFromSubButton": "朗读当前字幕",
         "minimaxFromSubButton": "朗读当前字幕",
@@ -1232,7 +1299,8 @@ translations = {
         "ShowMiniMax": "配置",
         "openGuideButton":"使用教程",
         "ShowOpenAI": "配置",
-        "ShowMiniMaxClone": "添加克隆音色",
+        "ShowMiniMaxClone": "克隆音色",
+        "minimaxDeleteVoice":"删除音色",
         "OpenLinkButton":"关注公众号：游艺所\n\n>>>点击查看更多信息<<<\n\n© 2025, Copyright by HB.",
         "infoTxt":infomsg_cn,
         "AzureLabel":"填写Azure API信息",
@@ -1319,7 +1387,8 @@ translations = {
         "ShowAzure":"Config",
         "ShowMiniMax": "Config",
         "ShowOpenAI": "Config",
-        "ShowMiniMaxClone": "Add Clone Voice",
+        "ShowMiniMaxClone": "Clone Voice",
+        "minimaxDeleteVoice":"Delete Voice",
         "OpenLinkButton":"😊Buy Me A Coffe😊\n\n© 2025, Copyright by HB.",
         "infoTxt":infomsg_en,
         "AzureLabel":"Azure API",
@@ -1437,7 +1506,7 @@ with open(voice_file, "r", encoding="utf-8") as file:
 azure_voices = voices_data.get("azure_voice", {})
 edgeTTS_voices = voices_data.get("edge_voice", {})
 openai_voices = voices_data.get("openai_voice", {}).get("voices", [])
-minimax_voices = voices_data.get("minimax_voices", [])
+minimax_voices = voices_data.get("minimax_system_voice", [])
 minimax_clone_voices = voices_data.get("minimax_clone_voices", [])
 
 preset_file = os.path.join(script_path, 'instruction.json')
@@ -1490,49 +1559,37 @@ for voice in openai_voices:
     items["OpenAIVoiceCombo"].AddItem(voice)
   
 if minimax_clone_voices:
-    checked = items["LangEnCheckBox"].Checked
     for voice in minimax_clone_voices:
-        # 三元表达式：选中时添加 voice_name，否则添加 voice_id
-        items["minimaxVoiceCombo"].AddItem(
-            voice["voice_name"] if checked else voice["voice_id"]
-        )
+        items["minimaxVoiceCombo"].AddItem(voice["voice_name"])
 
 for voice  in minimax_voices:
-    if items["LangEnCheckBox"].Checked:
-        items["minimaxVoiceCombo"].AddItem(voice["voice_name"])  # 选中时添加英文
-    else:
-        items["minimaxVoiceCombo"].AddItem(voice["voice_id"]) # 未选中时添加中文
+    items["minimaxVoiceCombo"].AddItem(voice["voice_name"])  
 
         
 minimax_language = [
-    ("自动", "auto"),
-    ("中文", "Chinese"),
-    ("粤语", "Chinese,Yue"),
-    ("英语", "English"),
-    ("阿拉伯语", "Arabic"),
-    ("俄语", "Russian"),
-    ("西班牙语", "Spanish"),
-    ("法语", "French"),
-    ("葡萄牙语", "Portuguese"),
-    ("德语", "German"),
-    ("土耳其语", "Turkish"),
-    ("荷兰语", "Dutch"),
-    ("乌克兰语", "Ukrainian"),
-    ("越南语", "Vietnamese"),
-    ("印尼语", "Indonesian"),
-    ("日语", "Japanese"),
-    ("意大利语", "Italian"),
-    ("韩语", "Korean"),
-
+    "中文（普通话）", "中文（粤语）", "English", "Japanese", "Korean",
+    "Spanish", "Portuguese", "French", "Indonesian", "German", "Russian",
+    "Italian", "Arabic", "Turkish", "Ukrainian", "Vietnamese", "Dutch"
 ]
 
 # 将语言选项添加到 minimaxLanguageCombo
-for cn, en in minimax_language:
-    if items["LangEnCheckBox"].Checked:
-        items["minimaxLanguageCombo"].AddItem(en)  
-    else:
-        items["minimaxLanguageCombo"].AddItem(cn)  
-   
+for lang in minimax_language:
+    items["minimaxLanguageCombo"].AddItem(lang)  
+
+def update_voice_list(ev):
+    # 当前选中语言
+    selected_lang = items["minimaxLanguageCombo"].CurrentText
+    # 清空语音下拉框
+    items["minimaxVoiceCombo"].Clear()  # _README_WORKFLOW_20.txt](file-service://file-27aT4jFAer9mu7jVoLKdot)
+
+    # 只添加与 selected_lang 匹配的条目
+    for voice in minimax_clone_voices + minimax_voices:
+        if voice.get("language") == selected_lang:
+            items["minimaxVoiceCombo"].AddItem(voice["voice_name"])
+win.On["minimaxLanguageCombo"].CurrentIndexChanged = update_voice_list         
+# 程序启动后立即同步一次
+update_voice_list(None)
+
 # 定义情绪选项
 emotions = [
     ("默认", "Default"),
@@ -1568,6 +1625,11 @@ def on_minimax_model_combo_changed(event):
         items["minimaxEmotionCombo"].Enabled = False  # 启用情绪选择
     else:
         items["minimaxEmotionCombo"].Enabled = True  # 禁用情绪选择
+    if selected_model in [ "speech-01-hd","speech-01-turbo",]:
+        items["minimaxSubtitleCheckBox"].Enabled = True
+    else:
+        items["minimaxSubtitleCheckBox"].Checked = False
+        items["minimaxSubtitleCheckBox"].Enabled = False
 
 win.On["minimaxModelCombo"].CurrentIndexChanged = on_minimax_model_combo_changed
 
@@ -1798,8 +1860,6 @@ def switch_language(lang):
     根据 lang (可取 'cn' 或 'en') 切换所有控件的文本
     """
     items["NameTypeCombo"].Clear()
-    items["minimaxVoiceCombo"].Clear()
-    items["minimaxLanguageCombo"].Clear()
     items["minimaxEmotionCombo"].Clear()
 
     if "MyTabs" in items:
@@ -1834,21 +1894,6 @@ def switch_language(lang):
     for cn, en in emotions:
         items["minimaxEmotionCombo"].AddItem(en if checked else cn)
 
-    # 语音列表
-    for voice in minimax_clone_voices:
-        items["minimaxVoiceCombo"].AddItem(
-            voice["voice_id"] if checked else voice["voice_name"]
-        )
-
-    # 语音列表
-    for voice in minimax_voices:
-        items["minimaxVoiceCombo"].AddItem(
-            voice["voice_id"] if checked else voice["voice_name"]
-        )
-
-    # 语言列表
-    for cn, en in minimax_language:
-        items["minimaxLanguageCombo"].AddItem(en if checked else cn) 
 
 def on_cn_checkbox_clicked(ev):
     items["LangEnCheckBox"].Checked = not items["LangCnCheckBox"].Checked
@@ -2647,6 +2692,9 @@ def on_play_button_clicked(ev):
     if items["Path"].Text == '':
         show_warning_message(STATUS_MESSAGES.select_save_path)
         return
+    if items["AzureTxt"].PlainText == '':
+        show_warning_message(STATUS_MESSAGES.prev_txt)
+        return
     if azure_items["ApiKey"].Text == '' or azure_items["Region"].Text == '':
         show_warning_message(STATUS_MESSAGES.enter_api_key)
         return
@@ -2794,8 +2842,7 @@ def process_minimax_request(text_func, timeline_func):
             ""
         )
 
-    lang_name = items["minimaxLanguageCombo"].CurrentText
-    lang_id = next((en for cn, en in minimax_language if lang_name in (cn, en)), "")
+    lang_id = items["minimaxLanguageCombo"].CurrentText
     emotion_name = items["minimaxEmotionCombo"].CurrentText
     emotion_value = next((en for cn, en in emotions if emotion_name in (cn, en)), "")
     
@@ -2815,12 +2862,14 @@ def process_minimax_request(text_func, timeline_func):
         "text": text,
         "stream": False,
         "subtitle_enable":subtitle_enable,
-        "language_boost":lang_id,
+        #"language_boost":lang_id,
         "voice_setting": {
             "voice_id": voice_id,
             "speed": speed,
             "vol": vol,
-            "pitch": pitch
+            "pitch": pitch,
+            "english_normalization":True,
+            "latex_read":True,
         },
         "audio_setting": {
             "sample_rate": sample_rate,
@@ -2846,7 +2895,7 @@ def process_minimax_request(text_func, timeline_func):
     update_status(STATUS_MESSAGES.synthesizing)
 
     try:
-        response = requests.post(url, headers=headers, data=payload_json)
+        response = session.post(url, headers=headers, data=payload_json, timeout=(5, 60))
         #print("响应状态码:", response.status_code)
 
         response.raise_for_status()
@@ -2856,60 +2905,64 @@ def process_minimax_request(text_func, timeline_func):
         if not data:
             update_status(STATUS_MESSAGES.synthesis_failed)
             print("响应中未包含 'data' 字段:", parsed_json)
+            return
+  
+        # 处理音频数据
+        audio_data = bytes.fromhex(data.get("audio", ""))
+        filename = generate_filename(items["Path"].Text, text, f".{file_format}")
+        print(filename)
+    
+        with open(filename, 'wb') as f:
+            f.write(audio_data)
+        #print(f"音频已保存到 {filename}")
+    
+        if os.path.exists(filename):
+            start_frame, end_frame = timeline_func()
+            add_to_media_pool_and_timeline(start_frame, end_frame, filename)
+            #print(f"成功将文件添加到媒体池: {filename}")
         else:
-            # 处理音频数据
-            audio_data = bytes.fromhex(data.get("audio", ""))
-            filename = generate_filename(items["Path"].Text, text, f".{file_format}")
-            print(filename)
-        
-            with open(filename, 'wb') as f:
-                f.write(audio_data)
-            #print(f"音频已保存到 {filename}")
-        
-            if os.path.exists(filename):
-                start_frame, end_frame = timeline_func()
-                add_to_media_pool_and_timeline(start_frame, end_frame, filename)
-                #print(f"成功将文件添加到媒体池: {filename}")
-            else:
-                update_status(STATUS_MESSAGES.audio_save_failed)
-                print("音频文件保存失败")
-        
-            # 下载字幕文件及转换为 SRT
-            subtitle_url = data.get("subtitle_file")
-            if subtitle_url:
-                #print("字幕文件URL:", subtitle_url)
-                try:
-                    subtitle_response = requests.get(subtitle_url)
-                    subtitle_response.raise_for_status()  # 检查响应状态
-                
-                    subtitle_filename = os.path.splitext(filename)[0] + ".json"
-                    with open(subtitle_filename, 'wb') as f:
-                        f.write(subtitle_response.content)
-                    #print(f"字幕文件已保存到 {subtitle_filename}")
-
-                    # 读取 JSON 并转换为 SRT 格式
-                    with open(subtitle_filename, 'r', encoding='utf-8') as f:
-                        json_data = json.load(f)
-                    srt_filename = os.path.splitext(subtitle_filename)[0] + ".srt"
-                    json_to_srt(json_data, srt_filename)
-                    # 成功生成 SRT 后，删除 JSON 文件
-                    os.remove(subtitle_filename)
-                except Exception as e:
-                    print(f"字幕处理出错: {e}")
-            else:
-             print("响应中未包含 'subtitle_file' 字段")
+            update_status(STATUS_MESSAGES.audio_save_failed)
+            print("音频文件保存失败")
+            return
+    
+        # 下载字幕文件及转换为 SRT
+        subtitle_url = data.get("subtitle_file")
+        if subtitle_url:
+            #print("字幕文件URL:", subtitle_url)
+            try:
+                subtitle_response = session.get(subtitle_url, timeout=(5, 60))
+                subtitle_response.raise_for_status()  # 检查响应状态
             
+                subtitle_filename = os.path.splitext(filename)[0] + ".json"
+                with open(subtitle_filename, 'wb') as f:
+                    f.write(subtitle_response.content)
+                #print(f"字幕文件已保存到 {subtitle_filename}")
+
+                # 读取 JSON 并转换为 SRT 格式
+                with open(subtitle_filename, 'r', encoding='utf-8') as f:
+                    json_data = json.load(f)
+                srt_filename = os.path.splitext(subtitle_filename)[0] + ".srt"
+                json_to_srt(json_data, srt_filename)
+                # 成功生成 SRT 后，删除 JSON 文件
+                os.remove(subtitle_filename)
+                import_srt_to_timeline(srt_filename)
+            except (requests.exceptions.ChunkedEncodingError) as e:
+                print(f"字幕处理出错: {e}")
+        else:
+            print("响应中未包含 'subtitle_file' 字段")
+        
     except requests.exceptions.RequestException as e:
         print(f"请求失败: {e}")
         update_status(STATUS_MESSAGES.synthesis_failed)
+    except requests.exceptions.ChunkedEncodingError as e:
+        print(f"连接中断或数据读取不完整（ChunkedEncodingError）: {e}")
+        update_status(STATUS_MESSAGES.synthesis_failed)
     except json.JSONDecodeError as e:
-        update_status(STATUS_MESSAGES.synthesis_failed)
         print(f"JSON解析失败: {e}")
-    except KeyError as e:
         update_status(STATUS_MESSAGES.synthesis_failed)
+    except KeyError as e:
         print(f"响应中缺少关键字段: {e}")
-
-
+        update_status(STATUS_MESSAGES.synthesis_failed)
 
 def json_to_srt(json_data, srt_path):
     """
@@ -3104,6 +3157,10 @@ def on_minimax_break_button_clicked(ev):
     items["minimaxText"].InsertPlainText(f'<#{breaktime}#>')
 
 win.On.minimaxBreakButton.Clicked = on_minimax_break_button_clicked
+
+def on_delete_minimax_clone_voice(ev):
+    ...
+win.On.minimaxDeleteVoice.Clicked = on_delete_minimax_clone_voice
 
 def on_alphabet_button_clicked(ev):
     items["AzureTxt"].Copy()
@@ -3480,7 +3537,7 @@ def add_clone_voice(
     combo.Clear()
     # 优先添加克隆列表，再添加原始列表
     for voice in updated_clone_voices + minimax_voices:
-        combo.AddItem(voice["voice_id"] if lang_en_checked else voice["voice_name"])
+        combo.AddItem(voice["voice_name"])
 
     # 7. 写回文件
     try:
@@ -3529,7 +3586,14 @@ def on_minimax_clone_confirm(ev):
     # 5. 先 ensure file_id
     if minimax_clone_items["minimaxCloneFileID"].Text == "":
         file_path = render_audio_by_marker(items["Path"].Text)
+        if file_path is None:
+            return
         print(f"file_path:{file_path}")
+        if os.path.exists(file_path):
+            file_size = os.path.getsize(file_path)
+            if file_size > 20 * 1024 * 1024:
+                show_warning_message(STATUS_MESSAGES.file_size)
+                return
         minimax_clone_items["minimaxCloneStatus"].Text = f"Upload File ..."
         cloner.upload_file(file_path)
         print(f"file_id:{cloner.file_id}")
@@ -3551,7 +3615,7 @@ def on_minimax_clone_confirm(ev):
             current_timeline.GetStartFrame(),
             current_timeline.GetEndFrame(),
             demo_path
-        )
+        )   
         minimax_clone_voices = add_clone_voice(
             voice_file=voice_file,
             voice_name=voice_name,
