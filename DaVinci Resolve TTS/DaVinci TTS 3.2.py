@@ -9,7 +9,6 @@ X_CENTER = (SCREEN_WIDTH - WINDOW_WIDTH) // 2
 Y_CENTER = (SCREEN_HEIGHT - WINDOW_HEIGHT) // 2
 SCRIPT_KOFI_URL="https://ko-fi.com/heiba"
 SCRIPT_WX_URL = "https://mp.weixin.qq.com/s?__biz=MzUzMTk2MDU5Nw==&mid=2247484626&idx=1&sn=e5eef7e48fbfbf37f208ed9a26c5475a&chksm=fabbc2a8cdcc4bbefcb7f6c72a3754335c25ec9c3e408553ec81c009531732e82cbab923276c#rd"
-
 SCRIPT_INFO_CN = """
 <!DOCTYPE html>
 <html lang="en">
@@ -47,6 +46,11 @@ SCRIPT_INFO_CN = """
     </style>
 </head>
 <body>
+<h3>更新[3.2] 2025-04-30</h3>
+    <li>-MiniMax语音</li>
+    <ul>
+            <li>新增270+系统音色！</li> 
+        </ul>   
     <h3>更新[3.1] 2025-04-20</h3>
     <li>-MiniMax语音</li>
     <ul>
@@ -178,6 +182,11 @@ SCRIPT_INFO_EN = """
     </style>
 </head>
 <body>
+<h3>Update [3.2] 2025-04-30</h3> 
+<li>-Minimax TTS</li> 
+    <ul> 
+       <li>Added 270+ system voices!</li>
+    </ul>
 <h3>Update [3.1] 2025-04-20</h3> 
 <li>-Minimax TTS</li> 
     <ul> 
