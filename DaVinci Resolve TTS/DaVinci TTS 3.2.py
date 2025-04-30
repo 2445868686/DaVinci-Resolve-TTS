@@ -1,4 +1,16 @@
-infomsg_cn = """
+SCRIPT_NAME = "DaVinci TTS "
+SCRIPT_VERSION = "3.2"
+SCRIPT_AUTHOR = "HEIBA"
+SCREEN_WIDTH = 1920
+SCREEN_HEIGHT = 1080
+WINDOW_WIDTH = 800
+WINDOW_HEIGHT = 400
+X_CENTER = (SCREEN_WIDTH - WINDOW_WIDTH) // 2
+Y_CENTER = (SCREEN_HEIGHT - WINDOW_HEIGHT) // 2
+SCRIPT_KOFI_URL="https://ko-fi.com/heiba"
+SCRIPT_WX_URL = "https://mp.weixin.qq.com/s?__biz=MzUzMTk2MDU5Nw==&mid=2247484626&idx=1&sn=e5eef7e48fbfbf37f208ed9a26c5475a&chksm=fabbc2a8cdcc4bbefcb7f6c72a3754335c25ec9c3e408553ec81c009531732e82cbab923276c#rd"
+
+SCRIPT_INFO_CN = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -129,7 +141,7 @@ infomsg_cn = """
 </html>
 
 """
-infomsg_en = """
+SCRIPT_INFO_EN = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -255,7 +267,7 @@ infomsg_en = """
 </body>
 </html>
 """
-clone_info_cn = """
+SCRIPT_CLONE_INFO_CN = """
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -349,8 +361,7 @@ clone_info_cn = """
 </html>
 
 """
-
-clone_info_en="""
+SCRIPT_CLONE_INFO_EN="""
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -449,6 +460,7 @@ clone_info_en="""
 </html>
 
 """
+
 import platform
 from xml.dom import minidom
 import xml.etree.ElementTree as ET
@@ -522,10 +534,13 @@ class STATUS_MESSAGES:
     clone_voices_error  = ("It already exists and cannot be added again!", "已存在，无法重复添加！")
     clone_voices_error1 = ("The parameters were filled in incorrectly!", "参数填写错误！")
     add_clone_succeed   = ("Added success!","添加成功！")
-    file_size           =("Exported file exceeds 20MB and may not be uploadable!","导出文件超过 20MB，可能无法上传！")
-    duration_seconds    =("Marks During should be between 10 seconds and 5 minutes!","标记长度应在10秒到5分钟之间！")
+    delete_clone_succeed= ("Deleted success!","删除成功！")
+    delete_clone_error  = ("Unable to delete system sound!","无法删除系统音色！")
+    file_size           = ("Exported file exceeds 20MB and may not be uploadable!","导出文件超过 20MB，可能无法上传！")
+    duration_seconds    = ("Marks During should be between 10 seconds and 5 minutes!","标记长度应在10秒到5分钟之间！")
     insert_mark         = ("Please use Mark points to indicate the reference audio range first!","请先使用Mark点标记参考音频范围！")
     prev_txt            = ("Please enter the audition text in the text box!","请在文本框输入试听文本！")
+
 def check_or_create_file(file_path):
     if os.path.exists(file_path):
         pass
@@ -827,16 +842,11 @@ def import_srt_to_timeline(srt_path):
 
 ui = fusion.UIManager
 dispatcher = bmd.UIDispatcher(ui)
-screen_width = 1920
-screen_height = 1080
-window_width = 850
-window_height = 400
-x_center = (screen_width - window_width) // 2
-y_center = (screen_height - window_height) // 2
+
 win = dispatcher.AddWindow({
     "ID": "MainWin", 
-    "WindowTitle": "DaVinci TTS 3.1", 
-    "Geometry": [x_center, y_center, window_width, window_height],
+    "WindowTitle": SCRIPT_NAME+SCRIPT_VERSION, 
+    "Geometry": [X_CENTER, Y_CENTER, WINDOW_WIDTH, WINDOW_HEIGHT],
     "Spacing": 10,
     "StyleSheet": """
         * {
@@ -918,7 +928,7 @@ win = dispatcher.AddWindow({
                 ]),
                 ui.VGroup({"ID": "Minimax TTS", "Weight": 1}, [
                     ui.HGroup({"Weight": 0.7}, [
-                        ui.VGroup({"Weight": 0.5}, [
+                        ui.VGroup({"Weight": 1}, [
                             ui.TextEdit({"ID": "minimaxText", "PlaceholderText": ""}),
                             ui.HGroup({"Weight": 0.1}, [
                                 ui.Button({"ID": "minimaxGetSubButton", "Text": "从时间线获取字幕", "Weight": 0.7}),
@@ -927,7 +937,7 @@ win = dispatcher.AddWindow({
                                 ui.Button({"ID": "minimaxBreakButton", "Text": "停顿", "Weight": 0.1})
                             ])
                         ]),
-                        ui.VGroup({"Weight": 0.5}, [
+                        ui.VGroup({"Weight": 1}, [
                             ui.HGroup({}, [
                                 ui.Label({"ID": "minimaxModelLabel","Text": "模型:", "Weight": 0}),
                                 ui.ComboBox({"ID": "minimaxModelCombo", "Text": "选择模型"}),
@@ -936,10 +946,14 @@ win = dispatcher.AddWindow({
                             ]),
                             ui.HGroup({}, [
                                 ui.Label({"ID": "minimaxVoiceLabel","Text": "音色:", "Weight": 0}),
-                                ui.ComboBox({"ID": "minimaxVoiceCombo", "Text": "选择人声"}),
-                                ui.Button({"ID": "minimaxPreviewButton", "Text": "试听"}),
-                                ui.Button({"ID": "ShowMiniMaxClone", "Text": "删除音色"}),
-                                ui.Button({"ID": "minimaxDeleteVoice", "Text": "删除音色"}),
+                                ui.ComboBox({"ID": "minimaxVoiceCombo", "Text": "选择人声","Weight": 1}),
+                               
+                            ]),
+                            ui.HGroup({}, [
+                               
+                                ui.Button({"ID": "minimaxPreviewButton", "Text": "试听","Weight": 0.1}),
+                                ui.Button({"ID": "ShowMiniMaxClone", "Text": "","Weight": 0.1}),
+                                ui.Button({"ID": "minimaxDeleteVoice", "Text": "","Weight": 0.1}),
                             ]),
                             ui.HGroup({}, [
                                 ui.Label({"ID": "minimaxEmotionLabel","Text": "情绪:", "Weight": 0}),
@@ -1023,7 +1037,7 @@ win = dispatcher.AddWindow({
                 ui.HGroup({"ID": "Config", "Weight": 1}, [
                     ui.VGroup({"Weight": 0.5, "Spacing": 10}, [
                         ui.HGroup({"Weight": 1}, [
-                            ui.TextEdit({"ID": "infoTxt", "Text": infomsg_cn, "ReadOnly": True, "Font": ui.Font({"PixelSize": 14})})
+                            ui.TextEdit({"ID": "infoTxt", "Text": "", "ReadOnly": True, "Font": ui.Font({"PixelSize": 14})})
                         ])
                     ]),
                     ui.VGroup({"Weight": 0.5, "Spacing": 10,}, [
@@ -1181,7 +1195,7 @@ minimax_clone_window = dispatcher.AddWindow(
     {
         "ID": "MiniMaxCloneWin",
         "WindowTitle": "MiniMax Clone",
-        "Geometry": [900, 400, 600, 420],
+        "Geometry": [X_CENTER, Y_CENTER, 600, 420],
         "Hidden": True,
         "StyleSheet": """
         * {
@@ -1228,7 +1242,7 @@ minimax_clone_window = dispatcher.AddWindow(
                 ui.VGroup( {"Weight": 1, "Spacing": 10},
                     [
                         ui.HGroup({"Weight": 1}, [
-                            ui.TextEdit({"ID": "minimaxcloneinfoTxt", "Text": clone_info_cn, "ReadOnly": True, "Font": ui.Font({"PixelSize": 14})})
+                            ui.TextEdit({"ID": "minimaxcloneinfoTxt", "Text": SCRIPT_CLONE_INFO_CN, "ReadOnly": True, "Font": ui.Font({"PixelSize": 14})})
                         ])
                     ]
                 ),
@@ -1299,10 +1313,10 @@ translations = {
         "ShowMiniMax": "配置",
         "openGuideButton":"使用教程",
         "ShowOpenAI": "配置",
-        "ShowMiniMaxClone": "克隆音色",
-        "minimaxDeleteVoice":"删除音色",
-        "OpenLinkButton":"关注公众号：游艺所\n\n>>>点击查看更多信息<<<\n\n© 2025, Copyright by HB.",
-        "infoTxt":infomsg_cn,
+        "ShowMiniMaxClone": "克隆",
+        "minimaxDeleteVoice":"删除",
+        "OpenLinkButton":f"关注公众号：游艺所\n\n>>>点击查看更多信息<<<\n\n© 2025, Copyright by {SCRIPT_AUTHOR}.",
+        "infoTxt":SCRIPT_INFO_CN,
         "AzureLabel":"填写Azure API信息",
         "RegionLabel":"区域",
         "ApiKeyLabel":"密钥",
@@ -1320,7 +1334,7 @@ translations = {
         "minimaxNeedNoiseReduction":"开启降噪",
         "minimaxNeedVolumeNormalization":"音量统一",
         "minimaxClonePreviewLabel":"输入试听文本(限制300字以内)：",
-        "minimaxcloneinfoTxt":clone_info_cn,
+        "minimaxcloneinfoTxt":SCRIPT_CLONE_INFO_CN,
         "minimaxApiKeyLabel":"密钥",
         "intlCheckBox": "海外",
         "MiniMaxConfirm":"确定",
@@ -1387,10 +1401,10 @@ translations = {
         "ShowAzure":"Config",
         "ShowMiniMax": "Config",
         "ShowOpenAI": "Config",
-        "ShowMiniMaxClone": "Clone Voice",
-        "minimaxDeleteVoice":"Delete Voice",
-        "OpenLinkButton":"😊Buy Me A Coffe😊\n\n© 2025, Copyright by HB.",
-        "infoTxt":infomsg_en,
+        "ShowMiniMaxClone": "Clone",
+        "minimaxDeleteVoice":"Delete",
+        "OpenLinkButton":f"😊Buy Me A Coffe😊\n\n© 2025, Copyright by {SCRIPT_AUTHOR}.",
+        "infoTxt":SCRIPT_INFO_EN,
         "AzureLabel":"Azure API",
         "RegionLabel":"Region",
         "ApiKeyLabel":"Key",
@@ -1409,7 +1423,7 @@ translations = {
         "minimaxNeedVolumeNormalization":"Volume Normalization",
         "minimaxClonePreviewLabel":"Input text for cloned voice preview:\n(Limited to 2000 characters. )",
         "minimaxApiKeyLabel":"Key",
-        "minimaxcloneinfoTxt":clone_info_en,
+        "minimaxcloneinfoTxt":SCRIPT_CLONE_INFO_EN,
         "intlCheckBox": "intl",
         "MiniMaxConfirm":"OK",
         "MiniMaxCloneConfirm":"Add",
@@ -1459,6 +1473,7 @@ pitch = None
 volume = None
 style_degree = None
 stream = None
+minimax_voice_index_initialized = False
 
 def show_warning_message(status_tuple):
     use_english = items["LangEnCheckBox"].Checked
@@ -1577,6 +1592,7 @@ for lang in minimax_language:
     items["minimaxLanguageCombo"].AddItem(lang)  
 
 def update_voice_list(ev):
+    global minimax_voice_index_initialized
     # 当前选中语言
     selected_lang = items["minimaxLanguageCombo"].CurrentText
     # 清空语音下拉框
@@ -1586,9 +1602,15 @@ def update_voice_list(ev):
     for voice in minimax_clone_voices + minimax_voices:
         if voice.get("language") == selected_lang:
             items["minimaxVoiceCombo"].AddItem(voice["voice_name"])
+    # 只在第一次设置
+    if not minimax_voice_index_initialized:
+        items["minimaxVoiceCombo"].CurrentIndex = saved_settings.get(
+            "minimax_Voice",
+            default_settings["minimax_Voice"]
+        )
+        minimax_voice_index_initialized = True
 win.On["minimaxLanguageCombo"].CurrentIndexChanged = update_voice_list         
-# 程序启动后立即同步一次
-update_voice_list(None)
+
 
 # 定义情绪选项
 emotions = [
@@ -1940,8 +1962,6 @@ else:
     switch_language("cn")
 
 
-
-
 def get_english_name_type(chinese_name_type):
     return NameTypeMapping.get(chinese_name_type, chinese_name_type)
 
@@ -1989,8 +2009,8 @@ if saved_settings:
     minimax_items["intlCheckBox"].Checked = saved_settings.get("minimax_intlCheckBox", default_settings["minimax_intlCheckBox"])
     items["Path"].Text = saved_settings.get("Path", default_settings["Path"])
     items["minimaxModelCombo"].CurrentIndex = saved_settings.get("minimax_Model", default_settings["minimax_Model"])
-    items["minimaxVoiceCombo"].CurrentIndex= saved_settings.get("minimax_Voice", default_settings["minimax_Voice"])
     items["minimaxLanguageCombo"].CurrentIndex= saved_settings.get("minimax_Language", default_settings["minimax_Language"])
+    items["minimaxVoiceCombo"].CurrentIndex= saved_settings.get("minimax_Voice", default_settings["minimax_Voice"])
     items["minimaxSubtitleCheckBox"].Checked = saved_settings.get("minimax_SubtitleCheckBox", default_settings["minimax_SubtitleCheckBox"])
     items["minimaxEmotionCombo"].CurrentIndex = saved_settings.get("minimax_Emotion", default_settings["minimax_Emotion"])
     items["minimaxRateSpinBox"].Value = saved_settings.get("minimax_Rate", default_settings["minimax_Rate"])
@@ -2129,14 +2149,44 @@ def on_subtitle_text_changed(ev):
 win.On.AzureTxt.TextChanged = on_subtitle_text_changed
 
 def on_minimax_only_add_id_checkbox_clicked(ev):
+    project_manager = resolve.GetProjectManager()
+    current_project = project_manager.GetCurrentProject()
+    current_timeline = current_project.GetCurrentTimeline()
+
+    if not current_timeline:
+        print("❌ 当前没有打开的时间线。")
+        return
+
     checked = minimax_clone_items["minimaxOnlyAddID"].Checked
-    minimax_clone_items["minimaxNeedNoiseReduction"].Enabled = not minimax_clone_items["minimaxOnlyAddID"].Checked
-    minimax_clone_items["minimaxNeedVolumeNormalization"].Enabled = not minimax_clone_items["minimaxOnlyAddID"].Checked
-    minimax_clone_items["minimaxClonePreviewText"].Enabled = not minimax_clone_items["minimaxOnlyAddID"].Checked
-    if items["LangEnCheckBox"].Checked:
-        minimax_clone_items["MiniMaxCloneConfirm"].Text = "Add" if checked else "Clone"
+    en_checked = items["LangEnCheckBox"].Checked
+    marker_frame = 0
+    #print(marker_frame)
+    marker_name = "Clone Marker" if en_checked else "克隆标记" 
+    marker_note = "Drag the marker points to define the range for clone audio, which should be greater than 10 seconds and less than 5 minutes." if en_checked else"拖拽Mark点范围确定克隆音频的范围，大于10s，小于5分钟"
+    marker_date = "clone"
+    marker_color = "Red"
+    marker_duration = 250
+    if checked:
+        success = current_timeline.DeleteMarkerByCustomData(marker_date)
+        print("✅ 成功删除 Marker！" if success else "❌ 删除 Marker 失败，请手动删除")
     else:
-        minimax_clone_items["MiniMaxCloneConfirm"].Text = "添加" if checked else "克隆"
+        current_timeline.DeleteMarkerAtFrame(marker_frame)
+        success = current_timeline.AddMarker(
+            marker_frame,
+            marker_color,
+            marker_name,
+            marker_note,
+            marker_duration,
+            marker_date
+        )
+        print("✅ 成功添加 Marker！" if success else "❌ 添加 Marker 失败，请检查frameId或其他参数是否正确。")
+
+    # 批量处理控件启用状态
+    for key in ["minimaxNeedNoiseReduction", "minimaxNeedVolumeNormalization", "minimaxClonePreviewText"]:
+        minimax_clone_items[key].Enabled = not checked
+
+    # 设置按钮文本
+    minimax_clone_items["MiniMaxCloneConfirm"].Text = ("Add" if checked else "Clone") if items["LangEnCheckBox"].Checked else ("添加" if checked else "克隆")
 minimax_clone_window.On.minimaxOnlyAddID.Clicked = on_minimax_only_add_id_checkbox_clicked
 
 def on_unuseapi_checkbox_clicked(ev):
@@ -2152,6 +2202,7 @@ def on_unuseapi_checkbox_clicked(ev):
     for language in Language:
         items["LanguageCombo"].AddItem(language)
     update_name_combo(items, lang, voice_dict)
+    
 azure_config_window.On.UnuseAPICheckBox.Clicked = on_unuseapi_checkbox_clicked
 
 def on_language_combo_current_index_changed(ev):
@@ -2165,6 +2216,7 @@ def on_language_combo_current_index_changed(ev):
     selected_language = Language[lang_index]
     lang = next(locale for locale, data in voice_dict.items() if data['language'] == selected_language)
     update_name_combo(items, lang, voice_dict)
+    
 win.On.LanguageCombo.CurrentIndexChanged = on_language_combo_current_index_changed
 
 def on_name_combo_current_index_changed(ev):
@@ -2223,6 +2275,7 @@ win.On.NameCombo.CurrentIndexChanged = on_name_combo_current_index_changed
 def on_name_type_combo_current_index_changed(ev):
     flagmark()
     update_name_combo(items, lang, voice_dict)
+    
 win.On.NameTypeCombo.CurrentIndexChanged = on_name_type_combo_current_index_changed
 
 
@@ -2481,6 +2534,7 @@ def update_status(status_tuple):
 def synthesize_speech(service_region, speech_key, lang, voice_name, subtitle, rate, volume, style, style_degree, multilingual,pitch,audio_format, audio_output_config):
     speech_config = speechsdk.SpeechConfig(subscription=speech_key, region=service_region)
     speech_config.set_speech_synthesis_output_format(audio_format)
+    speech_config.set_property(speechsdk.PropertyId.SpeechServiceConnection_SynthVoiceTimeout, "60000")  # 设置为60秒
     ssml = create_ssml(lang=lang, voice_name=voice_name, text=subtitle, rate=rate, volume=volume, style=style, styledegree=style_degree,multilingual= multilingual,pitch=pitch)
     print(ssml)
     
@@ -3158,9 +3212,6 @@ def on_minimax_break_button_clicked(ev):
 
 win.On.minimaxBreakButton.Clicked = on_minimax_break_button_clicked
 
-def on_delete_minimax_clone_voice(ev):
-    ...
-win.On.minimaxDeleteVoice.Clicked = on_delete_minimax_clone_voice
 
 def on_alphabet_button_clicked(ev):
     items["AzureTxt"].Copy()
@@ -3348,9 +3399,9 @@ def close_and_save(settings_file):
 
 def on_open_link_button_clicked(ev):
     if items["LangEnCheckBox"].Checked :
-        webbrowser.open("https://ko-fi.com/heiba")
+        webbrowser.open(SCRIPT_KOFI_URL)
     else :
-        webbrowser.open("https://mp.weixin.qq.com/s?__biz=MzUzMTk2MDU5Nw==&mid=2247484626&idx=1&sn=e5eef7e48fbfbf37f208ed9a26c5475a&chksm=fabbc2a8cdcc4bbefcb7f6c72a3754335c25ec9c3e408553ec81c009531732e82cbab923276c#rd")
+        webbrowser.open(SCRIPT_WX_URL)
 win.On.OpenLinkButton.Clicked = on_open_link_button_clicked
 
 def on_openai_preview_button_clicked(ev):
@@ -3494,60 +3545,127 @@ class MinimaxVoiceCloner:
         return local_path
 
     
-def add_clone_voice(
-    voice_file: str,
-    voice_name: str,
-    voice_id: str,
-    items: Dict[str, Any],
-    minimax_clone_voices: List[Dict[str,str]],
-    minimax_voices: List[Dict[str,str]],
-    lang_en_checked: bool
-) -> List[Dict[str,str]]:
-    # 1. 读文件
+def load_clone_data(voice_file: str) -> Dict[str, Any]:
+    """
+    读取 JSON 文件，返回包含 key 'minimax_clone_voices' 的字典
+    若文件不存在或解析失败，则返回空 dict 并初始化该 key
+    """
     try:
         with open(voice_file, 'r', encoding='utf-8') as f:
-            try:
-                data = json.load(f)
-            except json.JSONDecodeError:
-                data = {}
-    except IOError:
-        raise Exception(f"Cannot read file: {voice_file}")
-
-    # 2. 确保 key 存在
+            data = json.load(f)
+    except (IOError, json.JSONDecodeError):
+        data = {}
     data.setdefault("minimax_clone_voices", [])
+    return data
 
-    # 3. 检查重复
-    exists = any(
-        v["voice_name"] == voice_name or v["voice_id"] == voice_id
-        for v in data["minimax_clone_voices"]
-    )
-    if exists:
-        show_warning_message(STATUS_MESSAGES.clone_voices_error)
-        return minimax_clone_voices  # 不变
-
-    # 4. 插入新条目到开头
-    new_voice = {"voice_name": voice_name, "voice_id": voice_id}
-    data["minimax_clone_voices"].insert(0, new_voice)
-
-    # 5. 更新全局变量
-    updated_clone_voices = data["minimax_clone_voices"]
-
-    # 6. 刷新下拉框
-    combo = items["minimaxVoiceCombo"]
-    combo.Clear()
-    # 优先添加克隆列表，再添加原始列表
-    for voice in updated_clone_voices + minimax_voices:
-        combo.AddItem(voice["voice_name"])
-
-    # 7. 写回文件
+def save_clone_data(voice_file: str, data: Dict[str, Any]) -> None:
+    """
+    将 data 写回 voice_file，格式化输出
+    """
     try:
         with open(voice_file, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
     except IOError:
         raise Exception(f"Cannot write to file: {voice_file}")
-    
+
+def refresh_voice_combo(
+    items: Dict[str, Any],
+    clone_list: List[Dict[str, Any]],
+    system_list: List[Dict[str, Any]],
+) -> None:
+    """
+    刷新下拉框：只添加 language 与当前语言一致的条目
+    """
+    combo = items["minimaxVoiceCombo"]
+    combo.Clear()  # 清空所有选项 _README_WORKFLOW_20.txt](file-service://file-27aT4jFAer9mu7jVoLKdot)
+
+    current_lang = items["minimaxLanguageCombo"].CurrentText.strip()
+    # 先添加符合当前语言的克隆列表
+    for v in clone_list:
+        if v.get("language", "").strip() == current_lang:
+            combo.AddItem(v["voice_name"])
+    # 再添加符合当前语言的系统列表
+    for v in system_list:
+        if v.get("language", "").strip() == current_lang:
+            combo.AddItem(v["voice_name"])
+
+def add_clone_voice(
+    voice_file: str,
+    voice_name: str,
+    voice_id: str,
+    items: Dict[str, Any],
+    minimax_clone_voices: List[Dict[str, str]],
+    minimax_voices: List[Dict[str, str]],
+) -> List[Dict[str, str]]:
+    # 1. 加载现有数据
+    data = load_clone_data(voice_file)
+
+    # 2. 重复检查
+    for v in data["minimax_clone_voices"]:
+        if v.get("voice_name") == voice_name or v.get("voice_id") == voice_id:
+            show_warning_message(STATUS_MESSAGES.clone_voices_error)
+            return minimax_clone_voices
+
+    # 3. 插入新条目到列表开头
+    new_voice = {
+        "voice_id": voice_id,
+        "voice_name": voice_name,
+        "description": [],
+        "created_time": "1970-01-01",
+        "language": items["minimaxLanguageCombo"].CurrentText
+    }
+    data["minimax_clone_voices"].insert(0, new_voice)
+
+    # 4. 保存并刷新 UI
+    save_clone_data(voice_file, data)
+    refresh_voice_combo(items, data["minimax_clone_voices"], minimax_voices)
+
     show_warning_message(STATUS_MESSAGES.add_clone_succeed)
-    return updated_clone_voices
+    return data["minimax_clone_voices"]
+
+def delete_clone_voice(
+    voice_file: str,
+    voice_name: str,
+    items: Dict[str, Any],
+    minimax_clone_voices: List[Dict[str, str]],
+    minimax_voices: List[Dict[str, str]],
+) -> List[Dict[str, str]]:
+    # 1. 加载现有数据
+    data = load_clone_data(voice_file)
+    original = data["minimax_clone_voices"]
+
+    # 2. 过滤出所有不匹配的条目（strip + lower 匹配）
+    key = voice_name.strip().lower()
+    filtered = [
+        v for v in original
+        if v.get("voice_name", "").strip().lower() != key
+    ]
+
+    # 3. 如果没有任何条目被删除，提示并返回旧列表
+    if len(filtered) == len(original):
+        show_warning_message(STATUS_MESSAGES.delete_clone_error)
+        return minimax_clone_voices
+
+    # 4. 保存并刷新 UI
+    data["minimax_clone_voices"] = filtered
+    save_clone_data(voice_file, data)
+    refresh_voice_combo(items, filtered, minimax_voices)
+
+    show_warning_message(STATUS_MESSAGES.delete_clone_succeed)
+    return filtered
+
+def on_delete_minimax_clone_voice(ev):
+    global minimax_clone_voices  # 声明我们要更新的全局变量
+    voice_name = items["minimaxVoiceCombo"].CurrentText.strip()
+    minimax_clone_voices = delete_clone_voice(
+            voice_file=voice_file,
+            voice_name=voice_name,
+            items=items,
+            minimax_clone_voices=minimax_clone_voices,
+            minimax_voices=minimax_voices,
+            
+        )
+win.On.minimaxDeleteVoice.Clicked = on_delete_minimax_clone_voice
 
 def on_minimax_clone_confirm(ev):
     # 1. 参数检查
@@ -3579,7 +3697,7 @@ def on_minimax_clone_confirm(ev):
             items=items,
             minimax_clone_voices=minimax_clone_voices,
             minimax_voices=minimax_voices,
-            lang_en_checked=items["LangEnCheckBox"].Checked
+            
         )
         return
 
@@ -3623,7 +3741,7 @@ def on_minimax_clone_confirm(ev):
             items=items,
             minimax_clone_voices=minimax_clone_voices,
             minimax_voices=minimax_voices,
-            lang_en_checked=items["LangEnCheckBox"].Checked
+            
         )
         minimax_clone_items["minimaxCloneStatus"].Text = "Clone Successful!"
     else:
