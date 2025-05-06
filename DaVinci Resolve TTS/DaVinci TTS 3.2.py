@@ -539,8 +539,13 @@ class STATUS_MESSAGES:
     unsupported_audio   = ("Unsupported audio format selected.", "不支持的音频格式.")
     create_timeline     = ("Please create a timeline first!", "请先创建时间线！")
     reset_status        = ("", "")
+    render_audio        = ("Rendering ...","等待渲染...")
     voices_list         = ("The voices_list.json file is missing.", "缺少voices_list.json文件.")
     clone_voices_error  = ("It already exists and cannot be added again!", "已存在，无法重复添加！")
+    file_upload         = ("Upload File ...","上传音频中 ...")
+    file_clone          = ("Clone File ...","等待克隆完成 ...")
+    download_preclone   = ("Download Preview Audio ...","试听音频下载中")
+    clone_success       = ("Clone Success","克隆完成！")
     clone_voices_error1 = ("The parameters were filled in incorrectly!", "参数填写错误！")
     add_clone_succeed   = ("Added success!","添加成功！")
     delete_clone_succeed= ("Deleted success!","删除成功！")
@@ -549,7 +554,33 @@ class STATUS_MESSAGES:
     duration_seconds    = ("Marks During should be between 10 seconds and 5 minutes!","标记长度应在10秒到5分钟之间！")
     insert_mark         = ("Please use Mark points to indicate the reference audio range first!","请先使用Mark点标记参考音频范围！")
     prev_txt            = ("Please enter the audition text in the text box!","请在文本框输入试听文本！")
+    # —— 新增错误码提示 —— 
+    error_1000 = ("Unknown error", "未知错误，请稍后再试！")
+    error_1001 = ("request timeout", "请求超时，请稍后再试！")
+    error_1002 = ("rate limit", "请求频率超限，请稍后再试！")
+    error_1004 = ("Authentication failure", "请检查API Key!")
+    error_1008 = ("insufficient balance!","余额不足！")
+    error_1024 = ("internal error","内部错误,请稍后再试!")
+    error_1026 = ("input new_sensitive","输入内容涉敏!")
+    error_1027 = ("output new_sensitive","输出内容涉敏!")
+    error_1033 = ("system error!","系统错误,请稍后再试!")
+    error_1041 = ("conn limit!","连接数限制,请联系我们!")
+    error_1042 = ("invisible character ratio limit","非法字符超过最大比例（超过输入的 10%）")
+    error_1043 = ("Please check file_id and text_validation!", "请检查file_id与text_validation匹配度！")
+    error_1044 = ("clone prompt similarity check failed!", "克隆提示词相似度检查失败！")
+    error_2013 = ("invalid params!", "请检查请求参数！")
+    error_20132 = ("invalid samples or voice_id!", "语音克隆样本或voice_id参数错误！")
+    error_2037 = (" voice duration too long", "语音时长不符合要求！")
+    error_2038 = ("Unknown error", "用户语音克隆功能被禁用！")
+    error_2039 = ("voice clone voice id duplicate!", "语音克隆voice_id重复！")
+    error_2042 = ("You don't have access to this voice_id!", "无权访问该voice_id！")
+    error_2045 = ("rate growth limit!", "请求频率增长超限！")
+    error_2048 = ("prompt audio too long!", "语音克隆提示音频太长！")
+    error_2049 = ("invalid api key!", "无效的API Key！")
 
+
+
+    
 def check_or_create_file(file_path):
     if os.path.exists(file_path):
         pass
@@ -722,15 +753,7 @@ def render_audio_by_marker(output_dir):
     current_project.SetRenderSettings(render_settings)
     job_id = current_project.AddRenderJob()
     render_result = current_project.StartRendering([job_id])
-    while current_project.IsRenderingInProgress():
-        minimax_clone_items["minimaxCloneStatus"].Text = f"Rendering "
-        time.sleep(1)  # 等待 1 秒再检查
-        minimax_clone_items["minimaxCloneStatus"].Text = f"Rendering ."
-        time.sleep(1)
-        minimax_clone_items["minimaxCloneStatus"].Text = f"Rendering .."
-        time.sleep(1)
-        minimax_clone_items["minimaxCloneStatus"].Text = f"Rendering ..."
-        time.sleep(1)
+    update_status(STATUS_MESSAGES.render_audio)
     clone_filename = f"{filename}.mp3"
     clone_file_path = os.path.join(output_dir, clone_filename)
 
@@ -2538,12 +2561,12 @@ def update_status(status_tuple):
     items["StatusLabel"].Text = message
     items["minimaxStatusLabel"].Text = message
     items["OpenAIStatusLabel"].Text = message
+    minimax_clone_items["minimaxCloneStatus"].Text = message
     
 
 def synthesize_speech(service_region, speech_key, lang, voice_name, subtitle, rate, volume, style, style_degree, multilingual,pitch,audio_format, audio_output_config):
     speech_config = speechsdk.SpeechConfig(subscription=speech_key, region=service_region)
     speech_config.set_speech_synthesis_output_format(audio_format)
-    speech_config.set_property(speechsdk.PropertyId.SpeechServiceConnection_SynthVoiceTimeout, "60000")  # 设置为60秒
     ssml = create_ssml(lang=lang, voice_name=voice_name, text=subtitle, rate=rate, volume=volume, style=style, styledegree=style_degree,multilingual= multilingual,pitch=pitch)
     print(ssml)
     
@@ -2958,16 +2981,28 @@ def process_minimax_request(text_func, timeline_func):
     update_status(STATUS_MESSAGES.synthesizing)
 
     try:
-        response = session.post(url, headers=headers, data=payload_json, timeout=(5, 60))
-        #print("响应状态码:", response.status_code)
+        resp = session.post(url, headers=headers, data=payload_json, timeout=(5, 60))
 
-        response.raise_for_status()
-        parsed_json = response.json()
-    
-        data = parsed_json.get("data")
+        resp.raise_for_status()
+        resp_data = resp.json()
+        base_resp = resp_data.get("base_resp", {})
+        code = str(base_resp.get("status_code", ""))
+        # 仅当 code 非 "0" 时才弹警告
+        if code != "0":
+            attr = f"error_{code}"
+            status_tuple = getattr(
+                STATUS_MESSAGES,
+                attr,
+                STATUS_MESSAGES.error_1000
+            )
+            show_warning_message(status_tuple)
+            update_status(status_tuple)
+            raise RuntimeError(f"合成失败，状态码 {code}")
+
+        data = resp_data.get("data")
         if not data:
             update_status(STATUS_MESSAGES.synthesis_failed)
-            print("响应中未包含 'data' 字段:", parsed_json)
+            print("响应中未包含 'data' 字段:", resp_data)
             return
   
         # 处理音频数据
@@ -3495,29 +3530,59 @@ class MinimaxVoiceCloner:
         return f"{self.base_url}{path}?GroupId={self.group_id}"
 
     def upload_file(self, file_path: str) -> str:
+        """
+        上传音频文件，成功时返回 file_id，不弹窗；失败时根据状态码弹出警告并抛异常。
+        """
         print("Upload File ...")
-        url =  self._make_url(self.UPLOAD_PATH)
+        update_status(STATUS_MESSAGES.file_upload)
+        url = self._make_url(self.UPLOAD_PATH)
         headers = {'Authorization': f'Bearer {self.api_key}'}
         data = {'purpose': 'voice_clone'}
-        with open(file_path, 'rb') as f:
-            files = {'file': f}
-            resp = requests.post(url, headers=headers, data=data, files=files)
-        resp.raise_for_status()
-        resp_data = resp.json()
-        print(resp_data)
-        if resp.status_code==200 and "file" in resp_data:
-            self.file_id = resp_data["file"].get("file_id")
-            return self.file_id
-        else:
+
+        # 1. 发起请求并捕获网络或文件打开异常
+        try:
+            with open(file_path, 'rb') as f:
+                files = {'file': f}
+                resp = requests.post(url, headers=headers,
+                                        data=data, files=files, timeout=300)
+                resp.raise_for_status()
+                resp_data = resp.json()
+        except Exception as e:
+            print(f"文件上传请求失败：{e}")
+            # 通用错误提示
+            show_warning_message(STATUS_MESSAGES.error_1000)
+            raise
+
+        # 2. 解析业务状态码
+        base_resp = resp_data.get("base_resp", {})
+        code = str(base_resp.get("status_code", ""))
+
+        # 3. 只有业务失败时才弹窗并抛异常
+        if code != "0" or "file" not in resp_data:
+            attr = f"error_{code}"
+            status_tuple = getattr(
+                STATUS_MESSAGES,
+                attr,
+                STATUS_MESSAGES.error_1000
+            )
+            show_warning_message(status_tuple)
+            update_status(status_tuple)
             raise RuntimeError(f"文件上传失败: {resp_data}")
 
+        # 4. 成功时直接返回 file_id，不弹窗
+        self.file_id = resp_data["file"]["file_id"]
+        print(f"上传成功，file_id={self.file_id}")
+        return self.file_id
+
+
     def submit_clone(self,
-                     voice_id: str,
-                     need_noise_reduction: bool,
-                     need_volume_normalization: bool,
-                     text: str) -> dict:
+                 voice_id: str,
+                 need_noise_reduction: bool,
+                 need_volume_normalization: bool,
+                 text: str) -> dict:
+        update_status(STATUS_MESSAGES.file_clone)
         print("Clone File ...")
-        url =  self._make_url(self.CLONE_PATH)
+        url = self._make_url(self.CLONE_PATH)
         payload = {
             "file_id": self.file_id,
             "voice_id": voice_id,
@@ -3531,16 +3596,34 @@ class MinimaxVoiceCloner:
             'Authorization': f'Bearer {self.api_key}',
             'Content-Type': 'application/json'
         }
-        print(payload)
+
         resp = requests.post(url, headers=headers, json=payload)
         resp.raise_for_status()
-        return resp.json()
+        resp_data = resp.json()
+        base_resp = resp_data.get("base_resp", {})
+        code = str(base_resp.get("status_code", ""))
+        # 仅当 code 非 "0" 时才弹警告
+        if code != "0":
+            attr = f"error_{code}"
+            status_tuple = getattr(
+                STATUS_MESSAGES,
+                attr,
+                STATUS_MESSAGES.error_1000
+            )
+            show_warning_message(status_tuple)
+            update_status(status_tuple)
+            raise RuntimeError(f"合成失败，状态码 {resp_data}")
+
+        # 成功时不弹窗，直接返回
+        return resp_data
+
 
     def download_demo(self,
                       data: dict,
                       save_dir: str,
                       voice_id: str) -> Optional[str]:
         print("Download Preview Audio ...")
+        update_status(STATUS_MESSAGES.download_preclone)
         demo_url = data.get("demo_audio")
         if not demo_url:
             return None
@@ -3681,6 +3764,9 @@ def on_minimax_clone_confirm(ev):
     if not (minimax_items["minimaxGroupID"].Text and minimax_items["minimaxApiKey"].Text):
         show_warning_message(STATUS_MESSAGES.enter_api_key)
         return
+    if items["Path"].Text == '':
+        show_warning_message(STATUS_MESSAGES.select_save_path)
+        return
     global minimax_clone_voices  # 声明我们要更新的全局变量
     # 2. 读取通用参数
     group_id = minimax_items["minimaxGroupID"].Text
@@ -3721,7 +3807,7 @@ def on_minimax_clone_confirm(ev):
             if file_size > 20 * 1024 * 1024:
                 show_warning_message(STATUS_MESSAGES.file_size)
                 return
-        minimax_clone_items["minimaxCloneStatus"].Text = f"Upload File ..."
+        
         cloner.upload_file(file_path)
         print(f"file_id:{cloner.file_id}")
         minimax_clone_items["minimaxCloneFileID"].Text = str(cloner.file_id)
@@ -3729,14 +3815,13 @@ def on_minimax_clone_confirm(ev):
         cloner.file_id = int(minimax_clone_items["minimaxCloneFileID"].Text)
 
     # 6. 提交克隆并下载 demo
-    minimax_clone_items["minimaxCloneStatus"].Text = f"Clone File ..."
+   
     resp = cloner.submit_clone(voice_id, need_nr, need_vn, preview_text)
     print(f"response:{resp}")
 
     # 7. 如果成功，再把声音写入列表
     if resp.get("base_resp", {}).get("status_code") == 0:
         save_dir = items["Path"].Text
-        minimax_clone_items["minimaxCloneStatus"].Text = f"Download Preview Audio ..."
         demo_path = cloner.download_demo(resp, save_dir, voice_id)
         add_to_media_pool_and_timeline(
             current_timeline.GetStartFrame(),
@@ -3752,7 +3837,7 @@ def on_minimax_clone_confirm(ev):
             minimax_voices=minimax_voices,
             
         )
-        minimax_clone_items["minimaxCloneStatus"].Text = "Clone Successful!"
+        show_warning_message(STATUS_MESSAGES.clone_success)
     else:
         msg = resp.get("base_resp", {}).get("status_msg")
         minimax_clone_items["minimaxCloneStatus"].Text = f"ERROR:{msg}"
