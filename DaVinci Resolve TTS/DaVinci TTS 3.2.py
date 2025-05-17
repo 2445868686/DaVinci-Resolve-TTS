@@ -524,63 +524,6 @@ except ImportError:
     except ImportError as e:
         raise ImportError("Unable to import DaVinciResolveScript or python_get_resolve after adding paths") from e
 
-class STATUS_MESSAGES:
-    synthesis_failed    = ("Synthesis failed!", "合成失败！")
-    loaded_to_timeline  = ("Successfully loaded to timeline!", "成功加载到时间线！")
-    synthesizing        = ("Synthesizing...", "合成中...")
-    media_clip_exists   = ("The media pool already contains this clip.", "媒体池已存在该片段")
-    playing             = ("Playing...", "播放中...")
-    audio_save_failed   = ("Failed to save audio file.", "音频文件保存失败")
-    # 新增状态信息
-    enter_api_key       = ("Enter API key in the configuration panel.", "前往配置栏填写API密钥.")
-    download_json       = ("Move minimax_voice_data.json to the plugin directory.", "请下载minimax_voice_data.json文件到插件目录")
-    download_pcm        = ("Move minimax_voice_data.pcm to the plugin directory.", "请下载minimax_voice_data.pcm文件到插件目录")
-    select_save_path    = ("Select a save path in the configuration panel.", "前往配置栏选择保存路径.")
-    unsupported_audio   = ("Unsupported audio format selected.", "不支持的音频格式.")
-    create_timeline     = ("Please create a timeline first!", "请先创建时间线！")
-    reset_status        = ("", "")
-    render_audio        = ("Rendering ...","等待渲染...")
-    voices_list         = ("The voices_list.json file is missing.", "缺少voices_list.json文件.")
-    clone_voices_error  = ("It already exists and cannot be added again!", "已存在，无法重复添加！")
-    file_upload         = ("Upload File ...","上传音频中 ...")
-    file_clone          = ("Clone File ...","等待克隆完成 ...")
-    download_preclone   = ("Download Preview Audio ...","试听音频下载中")
-    clone_success       = ("Clone Success","克隆完成！")
-    clone_voices_error1 = ("The parameters were filled in incorrectly!", "参数填写错误！")
-    add_clone_succeed   = ("Added success!","添加成功！")
-    delete_clone_succeed= ("Deleted success!","删除成功！")
-    delete_clone_error  = ("Unable to delete system sound!","无法删除系统音色！")
-    file_size           = ("Exported file exceeds 20MB and may not be uploadable!","导出文件超过 20MB，可能无法上传！")
-    duration_seconds    = ("Marks During should be between 10 seconds and 5 minutes!","标记长度应在10秒到5分钟之间！")
-    insert_mark         = ("Please use Mark points to indicate the reference audio range first!","请先使用Mark点标记参考音频范围！")
-    prev_txt            = ("Please enter the audition text in the text box!","请在文本框输入试听文本！")
-    # —— 新增错误码提示 —— 
-    error_1000 = ("Unknown error", "未知错误，请稍后再试！")
-    error_1001 = ("request timeout", "请求超时，请稍后再试！")
-    error_1002 = ("rate limit", "请求频率超限，请稍后再试！")
-    error_1004 = ("Authentication failure", "请检查API Key!")
-    error_1008 = ("insufficient balance!","余额不足！")
-    error_1024 = ("internal error","内部错误,请稍后再试!")
-    error_1026 = ("input new_sensitive","输入内容涉敏!")
-    error_1027 = ("output new_sensitive","输出内容涉敏!")
-    error_1033 = ("system error!","系统错误,请稍后再试!")
-    error_1041 = ("conn limit!","连接数限制,请联系我们!")
-    error_1042 = ("invisible character ratio limit","非法字符超过最大比例（超过输入的 10%）")
-    error_1043 = ("Please check file_id and text_validation!", "请检查file_id与text_validation匹配度！")
-    error_1044 = ("clone prompt similarity check failed!", "克隆提示词相似度检查失败！")
-    error_2013 = ("invalid params!", "请检查请求参数！")
-    error_20132 = ("invalid samples or voice_id!", "语音克隆样本或voice_id参数错误！")
-    error_2037 = (" voice duration too long", "语音时长不符合要求！")
-    error_2038 = ("Unknown error", "用户语音克隆功能被禁用！")
-    error_2039 = ("voice clone voice id duplicate!", "语音克隆voice_id重复！")
-    error_2042 = ("You don't have access to this voice_id!", "无权访问该voice_id！")
-    error_2045 = ("rate growth limit!", "请求频率增长超限！")
-    error_2048 = ("prompt audio too long!", "语音克隆提示音频太长！")
-    error_2049 = ("invalid api key!", "无效的API Key！")
-
-
-
-    
 def check_or_create_file(file_path):
     if os.path.exists(file_path):
         pass
@@ -668,7 +611,16 @@ default_settings = {
 
 
 }
+status_file = os.path.join(script_path, 'status.json')
 
+class STATUS_MESSAGES:
+    pass
+with open(status_file, "r", encoding="utf-8") as file:
+    status_data = json.load(file)
+# 把 JSON 中的每一项都设置为 STATUS_MESSAGES 的类属性
+for key, (en, zh) in status_data.items():
+    setattr(STATUS_MESSAGES, key, (en, zh))
+    
 project_manager = resolve.GetProjectManager()
 current_project = project_manager.GetCurrentProject()
 current_timeline = current_project.GetCurrentTimeline()
@@ -3695,7 +3647,7 @@ def add_clone_voice(
     # 2. 重复检查
     for v in data["minimax_clone_voices"]:
         if v.get("voice_name") == voice_name or v.get("voice_id") == voice_id:
-            show_warning_message(STATUS_MESSAGES.clone_voices_error)
+            show_warning_message(STATUS_MESSAGES.error_2039)
             return minimax_clone_voices
 
     # 3. 插入新条目到列表开头
@@ -3777,7 +3729,10 @@ def on_minimax_clone_confirm(ev):
     need_nr    = minimax_clone_items["minimaxNeedNoiseReduction"].Checked
     need_vn    = minimax_clone_items["minimaxNeedVolumeNormalization"].Checked
     preview_text = minimax_clone_items["minimaxClonePreviewText"].PlainText.strip()
-
+    
+    if not voice_name or not voice_id:
+        show_warning_message(STATUS_MESSAGES.clone_id_error)
+        return
     # 3. 初始化或复用封装好的类
     cloner = MinimaxVoiceCloner(api_key, group_id,
                                 voice_file,
