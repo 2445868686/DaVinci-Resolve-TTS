@@ -9,6 +9,9 @@ X_CENTER = (SCREEN_WIDTH - WINDOW_WIDTH) // 2
 Y_CENTER = (SCREEN_HEIGHT - WINDOW_HEIGHT) // 2
 SCRIPT_KOFI_URL="https://ko-fi.com/heiba"
 SCRIPT_WX_URL = "https://mp.weixin.qq.com/s?__biz=MzUzMTk2MDU5Nw==&mid=2247484626&idx=1&sn=e5eef7e48fbfbf37f208ed9a26c5475a&chksm=fabbc2a8cdcc4bbefcb7f6c72a3754335c25ec9c3e408553ec81c009531732e82cbab923276c#rd"
+OPENAI_FM = "https://openai.fm"
+MINIMAX_PREW_URL = "https://www.minimax.io/audio/voices"
+MINIMAXI_PREW_URL = "https://www.minimaxi.com/audio/voices"
 SCRIPT_INFO_CN = """
 <!DOCTYPE html>
 <html lang="en">
@@ -2863,6 +2866,11 @@ def play_audio_segment(pcm_file, json_file, voice_name, sample_rate=32000, chann
         print(f"播放失败: {e}")
 
 def on_minimax_preview_button_click(ev):
+    if minimax_items["intlCheckBox"].Checked:
+        webbrowser.open(MINIMAX_PREW_URL)
+    else:
+        webbrowser.open(MINIMAXI_PREW_URL)
+"""
     try:
         # 请确保文件路径正确
         pcm_file = os.path.join(config_dir, "minimax_voice_data.pcm")  # 拼接完整路径
@@ -2887,6 +2895,7 @@ def on_minimax_preview_button_click(ev):
 
     except Exception as e:
         print(f"播放失败: {e}")
+"""      
 win.On.minimaxPreviewButton.Clicked = on_minimax_preview_button_click
 
 def process_minimax_request(text_func, timeline_func):
@@ -3445,7 +3454,7 @@ def on_open_link_button_clicked(ev):
 win.On.OpenLinkButton.Clicked = on_open_link_button_clicked
 
 def on_openai_preview_button_clicked(ev):
-    webbrowser.open("https://openai.fm")
+    webbrowser.open(OPENAI_FM)
 win.On.OpenAIPreviewButton.Clicked = on_openai_preview_button_clicked
 
 
