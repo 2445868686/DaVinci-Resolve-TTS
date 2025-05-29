@@ -5,7 +5,8 @@ setlocal enabledelayedexpansion
 rem -------- 配置目录 --------
 set "SCRIPT_DIR=%~dp0"
 set "WHEEL_DIR=%SCRIPT_DIR%wheel"
-for %%I in ("%SCRIPT_DIR%..\..\..\TTS\Lib") do set "TARGET_DIR=%%~fI"
+rem --- MODIFIED TARGET_DIR ---
+set "TARGET_DIR=C:\ProgramData\Blackmagic Design\DaVinci Resolve\Fusion\TTS\Lib"
 
 if not exist "%TARGET_DIR%" (
     echo [*] Creating target directory: "%TARGET_DIR%"
