@@ -1,5 +1,5 @@
 SCRIPT_NAME = "DaVinci TTS "
-SCRIPT_VERSION = "3.2"
+SCRIPT_VERSION = "3.3"
 SCRIPT_AUTHOR = "HEIBA"
 SCREEN_WIDTH = 1920
 SCREEN_HEIGHT = 1080
@@ -470,23 +470,74 @@ SCRIPT_CLONE_INFO_EN="""
 
 """
 
-import platform
+
+import subprocess, sys, os, platform
+
+# 1. 获取脚本所在目录（备用）
+script_path = os.path.dirname(os.path.abspath(sys.argv[0]))
+
+# 2. 根据不同平台设置 Lib 目录为绝对路径
+system = platform.system()
+if system == "Windows":
+    # Windows 下 C:\ProgramData\Blackmagic Design\DaVinci Resolve\Fusion\TTS\Lib
+    program_data = os.environ.get("PROGRAMDATA", r"C:\ProgramData")
+    lib_dir = os.path.join(
+        program_data,
+        "Blackmagic Design",
+        "DaVinci Resolve",
+        "Fusion",
+        "TTS",
+        "Lib"
+    )
+elif system == "Darwin":
+    # macOS 下 /Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/TTS/Lib
+    lib_dir = os.path.join(
+        "/Library",
+        "Application Support",
+        "Blackmagic Design",
+        "DaVinci Resolve",
+        "Fusion",
+        "TTS",
+        "Lib"
+    )
+else:
+    # 其他平台（Linux 等），回退到相对路径
+    lib_dir = os.path.normpath(
+        os.path.join(script_path, "..", "..", "..", "TTS", "Lib")
+    )
+
+# 3. 规范化一下路径（去掉多余分隔符或 ..）
+lib_dir = os.path.normpath(lib_dir)
+# —— 二、插入到 sys.path —— 
+if os.path.isdir(lib_dir):
+    # 放到最前面，确保优先加载
+    sys.path.insert(0, lib_dir)
+else:
+    # 如果路径不对，可打印日志帮助调试
+    print(f"Warning: TTS/Lib 目录不存在：{lib_dir}", file=sys.stderr)
+
+try:
+    import requests
+    import azure.cognitiveservices.speech as speechsdk
+    import edge_tts
+    import pypinyin
+    print(lib_dir)
+except ImportError as e:
+    print("依赖导入失败，请确保所有依赖已打包至 Lib 目录中：", lib_dir, "\n错误信息：", e)
+
+
+
 from xml.dom import minidom
 import xml.etree.ElementTree as ET
-import sys
-import os
-import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util import Retry
 import time
 import webbrowser
 import re
 import wave
-import subprocess
 import json
 from typing import Dict, Any, List,Optional
-import edge_tts
-import azure.cognitiveservices.speech as speechsdk
+
 
 # 创建带重试机制的 session（放在模块初始化，整个脚本共享）
 session = requests.Session()
@@ -534,15 +585,8 @@ def check_or_create_file(file_path):
         except IOError:
             raise Exception(f"Cannot create file: {file_path}")
 
-def get_script_path():
-    if len(sys.argv) > 0:
-        return os.path.dirname(os.path.abspath(sys.argv[0]))
-    else:
-        return os.getcwd()
-
-script_path = get_script_path()
-
-settings_file = os.path.join(script_path, 'TTS_settings.json')
+config_dir = os.path.join(script_path, 'config')
+settings_file = os.path.join(config_dir, 'TTS_settings.json')
 
 check_or_create_file(settings_file)
 
@@ -611,7 +655,7 @@ default_settings = {
 
 
 }
-status_file = os.path.join(script_path, 'status.json')
+status_file = os.path.join(config_dir, 'status.json')
 
 class STATUS_MESSAGES:
     pass
@@ -1496,7 +1540,7 @@ def show_warning_message(status_tuple):
     msgbox.Hide()
     
 # 加载Voice
-voice_file = os.path.join(script_path, 'voices_list.json')
+voice_file = os.path.join(config_dir, 'voices_list.json')
 if not os.path.exists(voice_file):
     show_warning_message(STATUS_MESSAGES.voices_list)
 with open(voice_file, "r", encoding="utf-8") as file:
@@ -1508,7 +1552,7 @@ openai_voices = voices_data.get("openai_voice", {}).get("voices", [])
 minimax_voices = voices_data.get("minimax_system_voice", [])
 minimax_clone_voices = voices_data.get("minimax_clone_voices", [])
 
-preset_file = os.path.join(script_path, 'instruction.json')
+preset_file = os.path.join(config_dir, 'instruction.json')
 if not os.path.exists(preset_file):
     preset_data = {
         "Custom": {
@@ -2821,8 +2865,8 @@ def play_audio_segment(pcm_file, json_file, voice_name, sample_rate=32000, chann
 def on_minimax_preview_button_click(ev):
     try:
         # 请确保文件路径正确
-        pcm_file = os.path.join(script_path, "minimax_voice_data.pcm")  # 拼接完整路径
-        json_file = os.path.join(script_path, "minimax_voice_data.json")
+        pcm_file = os.path.join(config_dir, "minimax_voice_data.pcm")  # 拼接完整路径
+        json_file = os.path.join(config_dir, "minimax_voice_data.json")
         # 检查文件是否存在
         if not os.path.exists(pcm_file):
             show_warning_message(STATUS_MESSAGES.download_pcm)
