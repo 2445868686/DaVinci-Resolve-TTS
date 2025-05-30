@@ -1,66 +1,61 @@
 #!/usr/bin/env bash
-#
-# Mac_Install.command
-# 将当前目录下 wheel/*.whl 和 wheel/*.tar.gz 安装到指定目录
-# 输出格式按要求显示，并屏蔽 pip notice
+set -e  # 出错即停
 
-# 1. 获取脚本所在目录（兼容路径中含空格）
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# —— 配色定义 ——  
+RED='\033[0;31m'  
+GREEN='\033[0;32m'  
+YELLOW='\033[1;33m'  
+BLUE='\033[1;34m'  
+CYAN='\033[0;36m'  
+BOLD='\033[1m'  
+NC='\033[0m'  # 清除颜色  
 
-# 2. wheel 包所在目录
-WHEEL_DIR="$SCRIPT_DIR/wheel"
+# —— 函数：打印标题 ——  
+print_header() {  
+  echo -e "${CYAN}┌────────────────────────────────────┐${NC}"  
+  echo -e " ${BOLD}${BLUE}Debug Information${NC}"  
+  echo -e "${CYAN}└────────────────────────────────────┘${NC}"  
+}
 
-# 3. 目标目录 (MODIFIED TO ABSOLUTE PATH)
-TARGET_DIR="/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/TTS/Lib"
+# —— 函数：打印项目（对齐 15 列） ——  
+print_item() {  
+  printf " ${YELLOW}%-15s${NC}: %s\n" "$1" "$2"  
+}
 
-# 4. 查找可用的 Python 解释器
-PYTHON_CMD="$(command -v python3 2>/dev/null || command -v python 2>/dev/null)"
-if [[ -z "$PYTHON_CMD" ]]; then
-    echo "ERROR: 未找到 python3 或 python，请先安装并确保在 PATH 中。"
-    exit 1
+# —— 检测是否在虚拟环境 ——  
+if [ -n "$VIRTUAL_ENV" ]; then  
+  echo -e "${RED}✖ 检测到 Python 虚拟环境：${VIRTUAL_ENV}${NC}"  
+  echo "  请先退出 (deactivate) 后再运行脚本。"  
+  exit 1  
+fi  
+if [ -n "$CONDA_DEFAULT_ENV" ] && [ "$CONDA_DEFAULT_ENV" != "base" ]; then  
+  echo -e "${RED}✖ 检测到 Conda 环境：$CONDA_DEFAULT_ENV${NC}"  
+  echo "  请先 conda deactivate 后再运行脚本。"  
+  exit 1  
 fi
 
-# 5. 收集所有 .whl 和 .tar.gz 文件到数组
-pkg_files=()
-# Ensure glob doesn't return literal string if no files match
-shopt -s nullglob
-for f in "$WHEEL_DIR"/*.whl "$WHEEL_DIR"/*.tar.gz; do
-    pkg_files+=("$f")
-done
-shopt -u nullglob # Revert nullglob
-
-# 6. 输出总数
-if [ ${#pkg_files[@]} -eq 0 ]; then
-    echo "No .whl or .tar.gz files found in \"$WHEEL_DIR\"."
-    exit 0
-fi
-echo "Found ${#pkg_files[@]} package files (whl/tar.gz)."
+# —— 打印调试信息 ——  
+MIRROR_URL="https://pypi.tuna.tsinghua.edu.cn/simple"  
+print_header  
+print_item "Time"      "$(date '+%Y-%m-%d %H:%M:%S')"  
+print_item "User"      "$(whoami)"  
+print_item "Python"    "$(which python3 2>/dev/null || which python)"  
+print_item "PyVersion" "$(python3 --version 2>&1 || python --version 2>&1)"  
+print_item "pip"       "$(python3 -m pip --version 2>&1 || python -m pip --version 2>&1)"  
+print_item "Mirror"    "$MIRROR_URL"  
 echo
 
-# 7. 确保目标目录存在
-mkdir -p "$TARGET_DIR"
-if [ $? -ne 0 ]; then
-    echo "ERROR: 创建目标目录失败: $TARGET_DIR"
-    echo "请检查权限或路径是否正确。"
-    exit 1
-fi
-echo "[*] Target directory: \"$TARGET_DIR\""
-echo
+# —— 关闭命令回显，留出清爽进度条 ——  
+set +x
 
-# 8. 按指定格式逐个安装
-for pkg in "${pkg_files[@]}"; do
-    name="$(basename "$pkg")"
-    printf "Installing [%s] ...\n" "$name"
-    if "$PYTHON_CMD" -m pip install "$pkg" \
-            --no-deps --target="$TARGET_DIR" \
-            --disable-pip-version-check -q >/dev/null 2>&1; then
-        printf "  [ OK ] %s\n\n" "$name"
-    else
-        printf "  [FAIL] %s\n\n" "$name"
-        echo "   >> 请检查错误日志，或尝试手动安装:"
-        echo "   >> $PYTHON_CMD -m pip install \"$pkg\" --no-deps --target=\"$TARGET_DIR\""
-    fi
-done
+# —— 安装依赖 ——  
+echo -e "${CYAN}➤ 开始安装（包含所有依赖）…${NC}"  
+python3 -m pip install \
+    -i "$MIRROR_URL" \
+    --default-timeout=120 \
+    --progress-bar=on \
+    requests azure-cognitiveservices-speech edge_tts pypinyin
 
-echo "All done."
-exit 0
+# —— 完成提示 ——  
+echo  
+echo -e "${GREEN}✔ 全部安装完成，包含所有依赖！${NC}"
