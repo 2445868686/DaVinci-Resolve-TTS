@@ -1,96 +1,61 @@
 @echo off
-REM -----------------------------------------------------
-REM  Python wheel Offline Download & Installation Script
-REM  1. Download latest packages and dependencies
-REM  2. Install into Fusion TTS directory
-REM -----------------------------------------------------
-
-:: —— Variables ——  
+chcp 65001 >nul
 setlocal enabledelayedExpansion
-set "SCRIPT_DIR=%~dp0"
-set "WHEEL_DIR=%SCRIPT_DIR%wheel"
+
+rem ======== Variables (modify as needed) ========
+set "WHEEL_DIR=C:\ProgramData\Blackmagic Design\DaVinci Resolve\Fusion\TTS\wheel"
 set "TARGET_DIR=C:\ProgramData\Blackmagic Design\DaVinci Resolve\Fusion\TTS\Lib"
+rem All required packages
 set "PACKAGES=requests azure-cognitiveservices-speech edge-tts pypinyin"
+rem Tsinghua mirror for faster downloads (remove if not needed)
 set "PIP_MIRROR=-i https://pypi.tuna.tsinghua.edu.cn/simple"
+rem =============================================
 
-:: —— Helper: log with timestamp and level ——  
-rem Usage: echo [%DATE% %TIME%][LEVEL] Message
-:: —— Start ——  
 echo.
-echo [%DATE% %TIME%][INFO] Python wheel offline download & installation started.
-echo.
+echo [%DATE% %TIME%] Starting download and offline installation of dependencies
+echo ------------------------------------------------------------
 
-:: —— Step 1: Prepare wheel directory ——  
+rem 1. Create wheel directory if it does not exist
 if not exist "%WHEEL_DIR%" (
-    echo [%DATE% %TIME%][INFO] Creating wheel download directory: "%WHEEL_DIR%"
+    echo [%DATE% %TIME%] Creating wheel download directory: "%WHEEL_DIR%"
     mkdir "%WHEEL_DIR%"
 ) else (
-    echo [%DATE% %TIME%][INFO] Wheel directory already exists: "%WHEEL_DIR%"
+    echo [%DATE% %TIME%] Wheel download directory already exists: "%WHEEL_DIR%"
 )
 
-:: —— Step 2: Purge pip cache ——  
-echo [%DATE% %TIME%][INFO] Clearing pip cache to avoid corrupted files...
-python -m pip cache purge >nul 2>&1
+rem 2. Clear pip cache to avoid potential corruption
+echo [%DATE% %TIME%] Clearing pip cache
+python -m pip cache purge --disable-pip-version-check
 
-:: —— Step 3: Download packages with progress bar ——  
+rem 3. Download all wheels (including dependencies)
 echo.
-echo [%DATE% %TIME%][INFO] Downloading packages: %PACKAGES% ...
-python -m pip download %PACKAGES% --no-cache-dir --dest "%WHEEL_DIR%" ^
-    --only-binary=:all: --use-feature=fast-deps --disable-pip-version-check ^
-    --progress-bar=on %PIP_MIRROR%
+echo [%DATE% %TIME%] Downloading packages: %PACKAGES%
+python -m pip download %PACKAGES% --dest "%WHEEL_DIR%" --only-binary=:all: ^
+    --use-feature=fast-deps --no-cache-dir %PIP_MIRROR%
 if errorlevel 1 (
-    echo [%DATE% %TIME%][ERROR] Download failed. Check network or mirror settings.
-    pause
-    exit /b 1
-) else (
-    echo [%DATE% %TIME%][SUCCESS] Download completed. Wheels saved to "%WHEEL_DIR%".
+    echo [%DATE% %TIME%] ERROR: Failed to download packages. Please check network connectivity or package names.
+    pause & exit /b 1
 )
 
-:: —— Step 4: Prepare target install directory ——  
-echo.
-echo [%DATE% %TIME%][INFO] Preparing installation directory: "%TARGET_DIR%"
+rem 4. Create target installation directory if it does not exist
 if not exist "%TARGET_DIR%" (
+    echo [%DATE% %TIME%] Creating target installation directory: "%TARGET_DIR%"
     mkdir "%TARGET_DIR%"
-    echo [%DATE% %TIME%][INFO] Created "%TARGET_DIR%".
 ) else (
-    echo [%DATE% %TIME%][INFO] Directory already exists.
+    echo [%DATE% %TIME%] Target installation directory already exists: "%TARGET_DIR%"
 )
 
-:: —— Step 5: Count wheel files ——  
-set /A total=0
-for %%F in ("%WHEEL_DIR%\*.whl") do set /A total+=1
-if !total! equ 0 (
-    echo [%DATE% %TIME%][ERROR] No .whl files found in "%WHEEL_DIR%". Aborting.
-    pause
-    exit /b 1
-)
-echo [%DATE% %TIME%][INFO] Found !total! wheel package(s) to install.
+rem 5. Perform offline installation of all packages
 echo.
-
-:: —— Step 6: Offline install each wheel ——  
-set /A success=0, failed=0
-set "failed_list="
-for %%F in ("%WHEEL_DIR%\*.whl") do (
-    set "fname=%%~nxF"
-    echo [%DATE% %TIME%][INFO] Installing !fname! ...
-    python -m pip install "%%~fF" --no-deps --target "%TARGET_DIR%" --disable-pip-version-check >nul 2>&1
-    if errorlevel 1 (
-        echo [%DATE% %TIME%][ERROR] Failed to install !fname!
-        set /A failed+=1
-        set "failed_list=!failed_list! !fname!"
-    ) else (
-        echo [%DATE% %TIME%][SUCCESS] Installed !fname!
-        set /A success+=1
-    )
+echo [%DATE% %TIME%] Installing packages offline into: "%TARGET_DIR%"
+python -m pip install %PACKAGES% --no-index --find-links "%WHEEL_DIR%" ^
+    --target "%TARGET_DIR%" --upgrade --disable-pip-version-check
+if errorlevel 1 (
+    echo [%DATE% %TIME%] ERROR: Offline installation failed. Please review the errors above.
+    pause & exit /b 1
 )
 
-:: —— Step 7: Summary ——  
 echo.
-echo [%DATE% %TIME%][INFO] Installation summary: Total=!total!  Success=!success!  Failed=!failed!
-if !failed! gtr 0 (
-    echo [%DATE% %TIME%][WARN] Failed packages:!failed_list!
-) else (
-    echo [%DATE% %TIME%][SUCCESS] All packages installed successfully!
-)
+echo [%DATE% %TIME%] SUCCESS: All packages have been installed successfully!
 pause
 endlocal
