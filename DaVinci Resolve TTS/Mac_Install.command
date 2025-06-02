@@ -4,7 +4,7 @@ set -euo pipefail
 # ———————— 配置变量 ————————
 PYTHON=python3
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WHEEL_DIR="$SCRIPT_DIR/wheel"
+WHEEL_DIR="/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/TTS/wheel"
 TARGET_DIR="/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/TTS/Lib"
 PACKAGES=(requests azure-cognitiveservices-speech edge-tts pypinyin)
 PIP_MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple"
@@ -49,32 +49,18 @@ sudo mkdir -p "$TARGET_DIR"
 sudo chown -R "$(whoami)" "$TARGET_DIR"
 log SUCCESS "Target directory ready and owned by $(whoami)."
 
-# ———————— 步骤 5：离线安装所有 wheel ————————
-log INFO "Installing wheels to target directory..."
-success=0
-failed=0
-failed_list=()
-
-for whl in "$WHEEL_DIR"/*.whl; do
-  name=$(basename "$whl")
-  log INFO "Installing $name ..."
-  if $PYTHON -m pip install "$whl" --no-deps --target "$TARGET_DIR" >/dev/null 2>&1; then
-    log SUCCESS "Installed $name"
-    ((success++))
-  else
-    log ERROR "Failed to install $name"
-    ((failed++))
-    failed_list+=("$name")
-  fi
-done
-
-# ———————— 步骤 6：安装汇总 ————————
-total=$((success + failed))
-log INFO "Installation summary: Total=$total  Success=$success  Failed=$failed"
-if [[ $failed -gt 0 ]]; then
-  log WARN "Failed packages: ${failed_list[*]}"
+# ———————— 步骤 5：离线安装指定的包及其依赖 ————————
+log INFO "Installing specified packages offline..."
+if $PYTHON -m pip install "${PACKAGES[@]}" \
+     --no-index \
+     --find-links "$WHEEL_DIR" \
+     --target "$TARGET_DIR"; then
+  log SUCCESS "Successfully installed specified packages and their dependencies."
 else
-  log SUCCESS "All packages installed successfully."
+  log ERROR "Offline installation of specified packages failed. Please check wheels and permissions."
+  exit 1
 fi
 
-log INFO "Process completed."
+# ———————— 步骤 6：安装汇总 ————————
+log INFO "Installation process completed. Please verify modules in $TARGET_DIR."
+log SUCCESS "All done."
