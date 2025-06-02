@@ -49,6 +49,8 @@ SCRIPT_INFO_CN = """
     </style>
 </head>
 <body>
+<h3>更新[3.3] 2025-06-02</h3>
+    <li>-修复了部分报错问题</li>
 <h3>更新[3.2] 2025-04-30</h3>
     <li>-MiniMax语音</li>
     <ul>
@@ -185,6 +187,8 @@ SCRIPT_INFO_EN = """
     </style>
 </head>
 <body>
+<h3>Update[3.3] 2025-06-02</h3>
+   <li>- Fixed some error issues</li>
 <h3>Update [3.2] 2025-04-30</h3> 
 <li>-Minimax TTS</li> 
     <ul> 
