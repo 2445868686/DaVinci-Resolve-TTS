@@ -49,8 +49,6 @@ SCRIPT_INFO_CN = """
     </style>
 </head>
 <body>
-<h3>更新[3.3] 2025-06-02</h3>
-    <li>-修复了部分报错问题</li>
 <h3>更新[3.2] 2025-04-30</h3>
     <li>-MiniMax语音</li>
     <ul>
@@ -187,8 +185,6 @@ SCRIPT_INFO_EN = """
     </style>
 </head>
 <body>
-<h3>Update[3.3] 2025-06-02</h3>
-   <li>- Fixed some error issues</li>
 <h3>Update [3.2] 2025-04-30</h3> 
 <li>-Minimax TTS</li> 
     <ul> 
@@ -3484,8 +3480,7 @@ def on_azure_register_link_button_clicked(ev):
 azure_config_window.On.AzureRegisterButton.Clicked = on_azure_register_link_button_clicked
 
 def on_open_guide_button_clicked(ev):
-    checked = items["LangEnCheckBox"].Checked
-    html_path  = os.path.join(script_path, 'Installation-Usage-Guide.html'if checked else '安装及使用教程.html') 
+    html_path  = os.path.join(script_path, 'Installation-Usage-Guide.html') 
     if os.path.exists(html_path):
         webbrowser.open(f'file://{html_path}')
     else:
