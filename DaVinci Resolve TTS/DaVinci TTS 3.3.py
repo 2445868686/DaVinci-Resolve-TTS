@@ -12,466 +12,6 @@ SCRIPT_WX_URL = "https://mp.weixin.qq.com/s?__biz=MzUzMTk2MDU5Nw==&mid=224748462
 OPENAI_FM = "https://openai.fm"
 MINIMAX_PREW_URL = "https://www.minimax.io/audio/voices"
 MINIMAXI_PREW_URL = "https://www.minimaxi.com/audio/voices"
-SCRIPT_INFO_CN = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            color: #ffffff;
-            padding: 20px;
-        }
-        h3 {
-            font-weight: bold;
-            font-size: 1.5em;
-            margin-top: 15px;
-            margin-bottom: 0px; /* 调整此处以减少间隔 */
-            border-bottom: 2px solid #f0f0f0;
-            padding-bottom: 5px;
-            color: #c7a364; /* 黄色 */
-        }
-        p {
-            font-size: 1.2em;
-            margin-top: 5px;
-            margin-bottom: 20px; /* 调整此处以减少间隔 */
-            color: #a3a3a3; /* 白色 */
-        }
-        a {
-            color: #1e90ff;
-            text-decoration: none;
-        }
-        a:hover {
-            text-decoration: underline;
-        }
-    </style>
-</head>
-<body>
-<h3>更新[3.2] 2025-04-30</h3>
-    <li>-MiniMax语音</li>
-    <ul>
-            <li>新增270+系统音色！</li> 
-        </ul>   
-    <h3>更新[3.1] 2025-04-20</h3>
-    <li>-MiniMax语音</li>
-    <ul>
-            <li>新增从达芬奇获取音频克隆音色！</li> 
-        </ul>   
-    <h3>更新[3.0] 2025-04-05</h3>
-        <li>-MiniMax语音</li>
-        <ul>
-            <li>新增speech-02-hd，全新的HD模型，拥有更出色的韵律和稳定性，复刻相似度和音质表现突出！</li> 
-            <li>新增speech-02-turbo，全新的Turbo模型，拥有更出色的韵律和稳定性，小语种能力加强，性能表现出色！</li> 
-            <li>可添加自定义克隆音色（前往<a href="https://www.minimaxi.com/">MINIMAX</a>获取你的克隆ID）！</li> 
-        </ul>   
-    <h3>更新[2.9] 2025-03-23</h3>
-        <li>-新增OpenAI TTS语音模型</li>
-
-    <h3>更新[2.8] 2025-03-16</h3>
-    
-        <li>-微软语音</li>
-        <ul>
-            <li>新增13种HD高清语音</li> 
-        </ul>
-        <li>-MiniMax语音</li>
-        <ul>
-            <li>新增语种选项，增强对指定的小语种和方言的识别能力！</li> 
-            <li>新增字幕功能，生成音频文件对应的时间戳字幕！</li> 
-        </ul>
-        
-    <h3>更新[2.7] 2025-01-18</h3>
-    
-        <li>-新增MiniMax 语音模型！</li>
-        <ul>
-            <li>支持100+系统音色自主选择；</li> 
-            <li>支持音量、语调、语速、输出格式调整；</li>    
-            <li>支持固定间隔时间控制；</li>   
-            <li>支持预览音色；</li>  
-        </ul>
-        
-    <h3>更新[2.6] 2025-01-16</h3>
-    
-        <li>-修复Window系统保存文件出错问题！</li>
-
-    <h3>更新[2.5] 2024-10-21</h3>
-    
-        <li>-新增最新的HD高清语音模型！</li>
-        <li>-修复使用丢帧时间码无法加载音频问题！</li>
-    <h3>更新[2.4] 2024-09-21</h3>
-        <li>-修复键盘上下键调整参数卡死问题！</li>
-        
-    <h3>新增功能 2024-08-13</h3>
-    
-        <li>-无需API KEY，免费使用超过300+种语音和100+种语言！</li>
-        <li>-修复语音名称显示问题</li>
-        <li>-新增功能：</li>
-        <ul>
-            <li>加载音频到时间线：合成音频后自动加载到时间线。</li> 
-            <li>朗读当前字幕：合成并加载播放头位置的字幕块。</li>    
-
-        </ul>
-
-    <h3>新增功能 2024-07-10</h3>
-    
-        <li>-全新UI设计，更大的字幕输入框以及字体</li>
-        <li>-新增自定义功能：</li>
-        <ul>
-            <li>发音：更改文字的发音！</li>
-            <li>文稿矫正：使用输入框的文本对生成的字幕一键修正！</li>       
-        </ul>
-
-    <h3>新增功能 2024-07-01</h3>
-    
-        <li>-启用API：需要填入Azure API，能够体验到软件的完整功能！</li>
-        <li>-停用API：不需要填入Azure API，但某些功能将被暂停使用！</li>
-        <li>-新增更多自定义功能：</li>
-        <ul>
-            <li>停顿：插入朗读停顿。</li>
-            <li>语速：调整说话语速。</li>
-            <li>音高：调整声音的高低。</li>
-            <li>音量：调整音量的大小。</li>  
-            <li>语言技能：使用Multilingual人物时，可切换为其他语言。</li>             
-        </ul>
-
-
-    <h3>介绍</h3>
-    <p>此脚本使用Azure的TTS功能将文字转换为语音。</p>
-
-    <h3>保存路径</h3>
-    <p>指定生成文件的保存路径。</p>
-
-    <h3>区域、API密钥</h3>
-    <p>从<a href="https://speech.microsoft.com/">Microsoft Speech Studio</a>获取您的API密钥。</p>
-</body>
-</html>
-
-"""
-SCRIPT_INFO_EN = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            color: #ffffff;
-            padding: 20px;
-        }
-        h3 {
-            font-weight: bold;
-            font-size: 1.5em;
-            margin-top: 15px;
-            margin-bottom: 0px; /* Adjust spacing */
-            border-bottom: 2px solid #f0f0f0;
-            padding-bottom: 5px;
-            color: #c7a364; /* Yellow */
-        }
-        p {
-            font-size: 1.2em;
-            margin-top: 5px;
-            margin-bottom: 20px; /* Adjust spacing */
-            color: #a3a3a3; /* White */
-        }
-        a {
-            color: #1e90ff;
-            text-decoration: none;
-        }
-        a:hover {
-            text-decoration: underline;
-        }
-    </style>
-</head>
-<body>
-<h3>Update [3.2] 2025-04-30</h3> 
-<li>-Minimax TTS</li> 
-    <ul> 
-       <li>Added 270+ system voices!</li>
-    </ul>
-<h3>Update [3.1] 2025-04-20</h3> 
-<li>-Minimax TTS</li> 
-    <ul> 
-       <li>Add a feature to pull audio from DaVinci so we can clone the voice’s timbre!</li>
-    </ul>
-<h3>Update [3.0] 2025-04-05</h3> 
-<li>-Minimax TTS</li> 
-    <ul> 
-        <li>New speech-02-hd: The brand new HD model boasts superior rhythm and stability, with outstanding performance in replication similarity and sound quality!</li> 
-        <li>New speech-02-turbo: The brand new Turbo model boasts superior rhythm and stability, with enhanced multilingual capabilities and excellent performance!</li>
-        <li>You can add a custom cloned voice (go to <a href="https://www.minimaxi.com/">MINIMAX</a> to get your clone ID)!</li>
-    </ul>
-<h3>Update [2.9] 2025-03-23</h3>
-     <li>-Added OpenAI TTS voice model</li>
-    <h3>Update [2.8] 2025-03-16</h3>
-        <li>-Microsoft TTS</li>
-        <ul>
-            <li>Added 13 new HD voices.</li>
-        </ul>
-        <li>-Minimax TTS</li>
-        <ul>
-            <li>Introduced new language options, improving recognition of specific lesser-known languages and dialects.</li>
-            <li>Added a subtitle generation feature, allowing the creation of subtitles with timestamps for audio files.</li>
-        </ul>
-    <h3>Update [2.7 beta] 2025-01-18</h3>
-    
-        <li>- Added MiniMax voice model!</li>
-        <ul>
-            <li>Supports 100+ system voice options;</li> 
-            <li>Supports volume, pitch, speech rate, and output format adjustments;</li>    
-            <li>Supports fixed interval time control;</li>   
-            <li>Supports voice preview;</li>  
-        </ul>
-        
-    <h3>Update [2.6] 2025-01-16</h3>
-    
-        <li>- Fixed file saving issue on Windows systems!</li>
-
-    <h3>Update [2.5] 2024-10-21</h3>
-    
-        <li>- Added the latest HD high-definition voice model!</li>
-        <li>- Fixed an issue where audio could not be loaded when using dropped frame timecodes!</li>
-    
-    <h3>Update [2.4] 2024-09-21</h3>
-        <li>- Fixed an issue where adjusting parameters with the keyboard up and down keys would freeze!</li>
-        
-    <h3>New Features 2024-08-13</h3>
-    
-        <li>- No API KEY required, free access to over 300+ voices and 100+ languages!</li>
-        <li>- Fixed an issue with voice name display.</li>
-        <li>- New Features:</li>
-        <ul>
-            <li>Load audio to the timeline: Automatically load synthesized audio into the timeline.</li> 
-            <li>Read current subtitle: Synthesize and load the subtitle block at the playhead position.</li>    
-        </ul>
-
-    <h3>New Features 2024-07-10</h3>
-    
-        <li>- Brand new UI design with a larger subtitle input box and font size.</li>
-        <li>- Added customization features:</li>
-        <ul>
-            <li>Pronunciation: Modify the pronunciation of text!</li>
-            <li>Transcript correction: Use text from the input box to correct generated subtitles with one click!</li>       
-        </ul>
-
-    <h3>New Features 2024-07-01</h3>
-    
-        <li>- Enable API: Requires Azure API key to experience the full functionality of the software.</li>
-        <li>- Disable API: No need for an Azure API key, but some features will be temporarily unavailable.</li>
-        <li>- Added more customization features:</li>
-        <ul>
-            <li>Pause: Insert reading pauses.</li>
-            <li>Speech rate: Adjust the speaking speed.</li>
-            <li>Pitch: Adjust the pitch of the voice.</li>
-            <li>Volume: Adjust the volume level.</li>  
-            <li>Language Skills: When using Multilingual voices, switch to other languages.</li>             
-        </ul>
-
-    <h3>Introduction</h3>
-    <p>This script uses Azure's TTS feature to convert text to speech.</p>
-
-    <h3>Save Path</h3>
-    <p>Specifies the save path for the generated files.</p>
-
-    <h3>Region, API Key</h3>
-    <p>Obtain your API key from <a href="https://speech.microsoft.com/">Microsoft Speech Studio</a>.</p>
-</body>
-</html>
-"""
-SCRIPT_CLONE_INFO_CN = """
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            color: #ffffff;
-            padding: 20px;
-        }
-        h3 {
-            font-weight: bold;
-            font-size: 1.5em;
-            margin-top: 15px;
-            margin-bottom: 0px; /* Adjust spacing */
-            border-bottom: 2px solid #f0f0f0;
-            padding-bottom: 5px;
-            color: #c7a364; /* Yellow */
-        }
-        h4 {
-            font-weight: bold;
-            font-size: 1em;
-            margin-top: 15px;
-            margin-bottom: 0px; /* Adjust spacing */
-            border-bottom: 2px solid #f0f0f0;
-            padding-bottom: 5px;
-            color: #c7a364; /* Yellow */
-        }
-        p {
-            font-size: 1.2em;
-            margin-top: 5px;
-            margin-bottom: 20px; /* Adjust spacing */
-            color: #a3a3a3; /* White */
-        }
-        a {
-            color: #1e90ff;
-            text-decoration: none;
-        }
-        a:hover {
-            text-decoration: underline;
-        }
-    </style>
-</head>
-<body>
-  <!-- 标题居中 -->
-  <h3 style="text-align: center;">MiniMax 克隆说明</h3>
-
-  <h4>☑ 已有克隆音色</h4>
-  <ul>
-    <li>
-        如果已经从MiniMax官方克隆了音色，直接填入
-        <strong>音色ID</strong> 和 <strong>音色名称</strong>，点击<strong>添加</strong>后，
-        音色列表中即可看到您的克隆音色！
-    </li>
-</ul>
-  <h4>☐ 已有克隆音色<br>（从达芬奇导出音频进行克隆）</h4>
-  <li>
-  <ul>
-    <li><strong>步骤一：</strong>确保时间线上已有要克隆的音频。</li>
-    <li>
-      <strong>步骤二：</strong>按 <strong>M 键</strong> 添加标记点，
-      按住 <strong>Alt 键</strong> 拖拽选取音频区间（<strong>10 秒–5 分钟</strong>）。
-    </li>
-    <li>
-      <strong>步骤三：</strong>在交付界面取消勾选<strong>导出视频</strong>，
-      将音频格式设置为 <strong>MP3</strong> 或 <strong>WAV</strong>。
-    </li>
-    <li>
-      <strong>步骤四：</strong>填写 <strong>音色名称</strong> 和 <strong>音色ID</strong>，
-      根据需要勾选 <strong>降噪</strong> 和 <strong>音频统一</strong> 选项。
-    </li>
-    <li>
-      <strong>步骤五：</strong>输入 <strong>试听文本</strong>，
-      克隆完成后试听音频会自动加载到时间线进行预览。
-    </li>
-    <li>
-      <strong>步骤六：</strong>点击<strong>克隆</strong>，克隆完成后
-      <strong>克隆ID</strong> 将出现在音色列表中。
-    </li>
-  </li>
-</ul>
-  <h4>费用说明</h4>
-  <li>
-    <ul>
-    <li>确保 minimax 账户余额充足，<strong>9.9 元/音色</strong>。</li>
-    <li>克隆音色时不会立即扣费，费用将在<strong>首次使用该音色合成语音</strong>时收取。</li>
-  </ul>
-  </li>
-</body>
-</html>
-
-"""
-SCRIPT_CLONE_INFO_EN="""
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            color: #ffffff;
-            padding: 20px;
-        }
-        h3 {
-            font-weight: bold;
-            font-size: 1.5em;
-            margin-top: 15px;
-            margin-bottom: 0px;
-            border-bottom: 2px solid #f0f0f0;
-            padding-bottom: 5px;
-            color: #c7a364; /* Yellow */
-        }
-        h4 {
-            font-weight: bold;
-            font-size: 1em;
-            margin-top: 15px;
-            margin-bottom: 0px;
-            border-bottom: 2px solid #f0f0f0;
-            padding-bottom: 5px;
-            color: #c7a364; /* Yellow */
-        }
-        p {
-            font-size: 1.2em;
-            margin-top: 5px;
-            margin-bottom: 20px;
-            color: #a3a3a3; /* White */
-        }
-        a {
-            color: #1e90ff;
-            text-decoration: none;
-        }
-        a:hover {
-            text-decoration: underline;
-        }
-        ul {
-            margin-top: 5px;
-            margin-bottom: 20px;
-            padding-left: 20px;
-            color: #a3a3a3;
-        }
-        li {
-            margin-bottom: 10px;
-        }
-    </style>
-</head>
-<body>
-    <!-- 标题居中 -->
-    <h3 style="text-align: center;">MiniMax Clone Instructions</h3>
-
-    <h4>☑ Existing Cloned Voice</h4>
-    <ul>
-        <li>
-            If you have already cloned a voice from the official MiniMax, simply enter the <strong>Voice ID</strong> and <strong>Voice Name</strong>, then click <strong>Add</strong>. You will see your cloned voice in the voice list!
-        </li>
-    </ul>
-
-    <h4>☐ Clone from DaVinci Exported Audio</h4>
-    <ul>
-        <li><strong>Step 1:</strong> Ensure the timeline contains the audio you want to clone.</li>
-        <li>
-            <strong>Step 2:</strong> Press <strong>M</strong> to add a marker, then hold <strong>Alt</strong> and drag to select the audio segment 
-            (<strong>10 seconds–5 minutes</strong>).
-        </li>
-        <li>
-            <strong>Step 3:</strong> In the delivery panel, uncheck <strong>Export Video</strong>, and set the audio format to 
-            <strong>MP3</strong> or <strong>WAV</strong>.
-        </li>
-        <li>
-            <strong>Step 4:</strong> Enter the <strong>Voice Name</strong> and <strong>Voice ID</strong>, and select the 
-            <strong>Noise Reduction</strong> and <strong>Audio Normalization</strong> options as needed.
-        </li>
-        <li>
-            <strong>Step 5:</strong> Enter the <strong>Preview Text</strong>. Once cloning is complete, the preview audio will automatically load into the timeline for playback.
-        </li>
-        <li>
-            <strong>Step 6:</strong> Click <strong>Clone</strong>. After completion, the <strong>Clone ID</strong> will appear in the voice list.
-        </li>
-    </ul>
-
-    <h4>Cost Explanation</h4>
-    <ul>
-        <li>Ensure your MiniMax account has sufficient balance; <strong>$3 per voice</strong>.</li>
-        <li>
-            Cloning a voice will not charge immediately; the fee is applied upon the <strong>first use</strong> of the voice for synthesis.
-        </li>
-    </ul>
-</body>
-</html>
-
-"""
 
 import os
 import sys
@@ -594,9 +134,19 @@ def check_or_create_file(file_path):
                 json.dump({}, file)  
         except IOError:
             raise Exception(f"Cannot create file: {file_path}")
+def load_resource(file_path: str) -> str:
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"{file_path} missing – check resources folder")
+    # 用标准的 open 读取
+    with open(file_path, 'r', encoding='utf-8') as f:
+        return f.read()
 
 config_dir = os.path.join(script_path, 'config')
 settings_file = os.path.join(config_dir, 'TTS_settings.json')
+script_info_cn  = load_resource(os.path.join(config_dir, "script_info_cn.html"))
+script_info_en  = load_resource(os.path.join(config_dir, "script_info_en.html"))
+script_clone_info_cn = load_resource(os.path.join(config_dir, "script_clone_info_cn.html"))
+script_clone_info_en = load_resource(os.path.join(config_dir, "script_clone_info_en.html"))
 
 check_or_create_file(settings_file)
 
@@ -1280,7 +830,7 @@ minimax_clone_window = dispatcher.AddWindow(
                 ui.VGroup( {"Weight": 1, "Spacing": 10},
                     [
                         ui.HGroup({"Weight": 1}, [
-                            ui.TextEdit({"ID": "minimaxcloneinfoTxt", "Text": SCRIPT_CLONE_INFO_CN, "ReadOnly": True, "Font": ui.Font({"PixelSize": 14})})
+                            ui.TextEdit({"ID": "minimaxcloneinfoTxt", "Text": script_clone_info_cn, "ReadOnly": True, "Font": ui.Font({"PixelSize": 14})})
                         ])
                     ]
                 ),
@@ -1354,7 +904,7 @@ translations = {
         "ShowMiniMaxClone": "克隆",
         "minimaxDeleteVoice":"删除",
         "OpenLinkButton":f"关注公众号：游艺所\n\n>>>点击查看更多信息<<<\n\n© 2025, Copyright by {SCRIPT_AUTHOR}.",
-        "infoTxt":SCRIPT_INFO_CN,
+        "infoTxt":script_info_cn,
         "AzureLabel":"填写Azure API信息",
         "RegionLabel":"区域",
         "ApiKeyLabel":"密钥",
@@ -1372,7 +922,7 @@ translations = {
         "minimaxNeedNoiseReduction":"开启降噪",
         "minimaxNeedVolumeNormalization":"音量统一",
         "minimaxClonePreviewLabel":"输入试听文本(限制300字以内)：",
-        "minimaxcloneinfoTxt":SCRIPT_CLONE_INFO_CN,
+        "minimaxcloneinfoTxt":script_clone_info_cn,
         "minimaxApiKeyLabel":"密钥",
         "intlCheckBox": "海外",
         "MiniMaxConfirm":"确定",
@@ -1442,7 +992,7 @@ translations = {
         "ShowMiniMaxClone": "Clone",
         "minimaxDeleteVoice":"Delete",
         "OpenLinkButton":f"😊Buy Me A Coffe😊\n\n© 2025, Copyright by {SCRIPT_AUTHOR}.",
-        "infoTxt":SCRIPT_INFO_EN,
+        "infoTxt":script_info_en,
         "AzureLabel":"Azure API",
         "RegionLabel":"Region",
         "ApiKeyLabel":"Key",
@@ -1461,7 +1011,7 @@ translations = {
         "minimaxNeedVolumeNormalization":"Volume Normalization",
         "minimaxClonePreviewLabel":"Input text for cloned voice preview:\n(Limited to 2000 characters. )",
         "minimaxApiKeyLabel":"Key",
-        "minimaxcloneinfoTxt":SCRIPT_CLONE_INFO_EN,
+        "minimaxcloneinfoTxt":script_clone_info_en,
         "intlCheckBox": "intl",
         "MiniMaxConfirm":"OK",
         "MiniMaxCloneConfirm":"Add",
