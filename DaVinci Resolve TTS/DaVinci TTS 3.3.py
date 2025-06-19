@@ -1,14 +1,20 @@
+# ================= 用户配置 =================
 SCRIPT_NAME = "DaVinci TTS "
 SCRIPT_VERSION = "3.3"
 SCRIPT_AUTHOR = "HEIBA"
+
 SCREEN_WIDTH = 1920
 SCREEN_HEIGHT = 1080
 WINDOW_WIDTH = 800
 WINDOW_HEIGHT = 400
 X_CENTER = (SCREEN_WIDTH - WINDOW_WIDTH) // 2
 Y_CENTER = (SCREEN_HEIGHT - WINDOW_HEIGHT) // 2
+
 SCRIPT_KOFI_URL="https://ko-fi.com/heiba"
 SCRIPT_WX_URL = "https://mp.weixin.qq.com/s?__biz=MzUzMTk2MDU5Nw==&mid=2247484626&idx=1&sn=e5eef7e48fbfbf37f208ed9a26c5475a&chksm=fabbc2a8cdcc4bbefcb7f6c72a3754335c25ec9c3e408553ec81c009531732e82cbab923276c#rd"
+AIRANSLATOR_KOFI_URL         = ""
+AIRANSLATOR_TAOBAO_URL       = ""
+
 OPENAI_FM = "https://openai.fm"
 MINIMAX_PREW_URL = "https://www.minimax.io/audio/voices"
 MINIMAXI_PREW_URL = "https://www.minimaxi.com/audio/voices"
@@ -42,7 +48,8 @@ except ImportError:
             "Blackmagic Design",
             "DaVinci Resolve",
             "Fusion",
-            "TTS",
+            "HB",
+            "DaVinci TTS",
             "Lib"
         )
     elif system == "Darwin":
@@ -53,7 +60,8 @@ except ImportError:
             "Blackmagic Design",
             "DaVinci Resolve",
             "Fusion",
-            "TTS",
+            "HB",
+            "DaVinci TTS",
             "Lib"
         )
     else:
@@ -649,13 +657,15 @@ win = dispatcher.AddWindow({
                             ui.Button({"ID": "ShowOpenAI", "Text": "配置","Weight": 0.1}),
                             
                         ]),
+                        ui.Label({"ID":"MoreScriptLabel","Text":"","Weight":0.1,"Alignment": {"AlignHCenter": True, "AlignVCenter": True}}),
+                        ui.Button({"ID":"AITranslatorButton","Text":"AI字幕翻译插件","Weight":0.1}),
                         ui.HGroup({"Weight": 0.1}, [
                             ui.CheckBox({"ID": "LangEnCheckBox", "Text": "EN", "Checked": True, "Alignment": {"AlignRight": True}, "Weight": 0}),
                             ui.CheckBox({"ID": "LangCnCheckBox", "Text": "简体中文", "Checked": False, "Alignment": {"AlignRight": True}, "Weight": 1}),
                             ui.Button({"ID": "openGuideButton", "Text": "教程","Weight": 0.1}),
                         ]),
                         ui.Button({
-                            "ID": "OpenLinkButton", 
+                            "ID": "CopyrightButton", 
                             "Text": "关注公众号：游艺所\n\n>>>点击查看更多信息<<<\n\n© 2024, Copyright by HB.",
                             "Alignment": {"AlignHCenter": True, "AlignVCenter": True},
                             "Font": ui.Font({"PixelSize": 12, "StyleName": "Bold"}),
@@ -903,13 +913,15 @@ translations = {
         "ShowOpenAI": "配置",
         "ShowMiniMaxClone": "克隆",
         "minimaxDeleteVoice":"删除",
-        "OpenLinkButton":f"关注公众号：游艺所\n\n>>>点击查看更多信息<<<\n\n© 2025, Copyright by {SCRIPT_AUTHOR}.",
+        "CopyrightButton":f"关注公众号：游艺所\n\n>>>点击查看更多信息<<<\n\n© 2025, Copyright by {SCRIPT_AUTHOR}.",
         "infoTxt":script_info_cn,
         "AzureLabel":"填写Azure API信息",
         "RegionLabel":"区域",
         "ApiKeyLabel":"密钥",
         "UnuseAPICheckBox":"停用 API",
         "minimaxSubtitleCheckBox":"生成srt字幕",
+        "MoreScriptLabel":"\n———————————更多功能———————————",
+        "AITranslatorButton":"AI字幕翻译插件",
         "AzureConfirm":"确定",
         "AzureRegisterButton":"注册",
         "minimaxLabel":"填写MiniMax API信息",
@@ -991,7 +1003,7 @@ translations = {
         "ShowOpenAI": "Config",
         "ShowMiniMaxClone": "Clone",
         "minimaxDeleteVoice":"Delete",
-        "OpenLinkButton":f"😊Buy Me A Coffe😊\n\n© 2025, Copyright by {SCRIPT_AUTHOR}.",
+        "CopyrightButton":f"😊Buy Me A Coffe😊\n\n© 2025, Copyright by {SCRIPT_AUTHOR}.",
         "infoTxt":script_info_en,
         "AzureLabel":"Azure API",
         "RegionLabel":"Region",
@@ -1003,6 +1015,8 @@ translations = {
         "minimaxLabel":"MiniMax API",
         "minimaxCloneLabel":"Add MiniMax Clone Voice",
         "minimaxCloneVoiceNameLabel":"Voice Name",
+        "MoreScriptLabel":"\n—————————MORE FEATURES—————————",
+        "AITranslatorButton":"AI Subtitle Translator Script",
         #"minimaxCloneGuide":"$3 per voice. \n\nYou won’t be charged for cloning a voice right away \n\n the cloning fee will only be charged the first time you use that cloned voice for speech synthesis.",
         "minimaxCloneVoiceIDLabel":"Voice ID",
         "minimaxCloneFileIDLabel":"File ID",
@@ -3008,7 +3022,7 @@ def on_open_link_button_clicked(ev):
         webbrowser.open(SCRIPT_KOFI_URL)
     else :
         webbrowser.open(SCRIPT_WX_URL)
-win.On.OpenLinkButton.Clicked = on_open_link_button_clicked
+win.On.CopyrightButton.Clicked = on_open_link_button_clicked
 
 def on_openai_preview_button_clicked(ev):
     webbrowser.open(OPENAI_FM)
@@ -3421,6 +3435,13 @@ def on_openai_close(ev):
     openai_config_window.Hide()
 openai_config_window.On.OpenAIConfirm.Clicked = on_openai_close
 openai_config_window.On.OpenAIConfigWin.Close = on_openai_close
+
+def on_aitranslator_button(ev):
+    if items["LangEnCheckBox"].Checked :
+        webbrowser.open(AIRANSLATOR_KOFI_URL)
+    else :
+        webbrowser.open(AIRANSLATOR_TAOBAO_URL)
+win.On.TTSButton.Clicked = on_aitranslator_button
 
 def on_close(ev):
     close_and_save(settings_file)
