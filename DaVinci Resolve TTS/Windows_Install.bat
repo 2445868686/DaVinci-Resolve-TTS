@@ -3,8 +3,8 @@ chcp 65001 >nul
 setlocal enabledelayedExpansion
 
 rem ======== Variables (modify as needed) ========
-set "WHEEL_DIR=C:\ProgramData\Blackmagic Design\DaVinci Resolve\Fusion\TTS\wheel"
-set "TARGET_DIR=C:\ProgramData\Blackmagic Design\DaVinci Resolve\Fusion\TTS\Lib"
+set "WHEEL_DIR=C:\ProgramData\Blackmagic Design\DaVinci Resolve\Fusion\HB\DaVinci TTS\wheel"
+set "TARGET_DIR=C:\ProgramData\Blackmagic Design\DaVinci Resolve\Fusion\HB\DaVinci TTS\Lib"
 rem All required packages
 set "PACKAGES=requests azure-cognitiveservices-speech edge-tts pypinyin"
 rem Tsinghua mirror for faster downloads (remove if not needed)
