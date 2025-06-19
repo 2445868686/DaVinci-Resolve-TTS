@@ -67,7 +67,7 @@ except ImportError:
     else:
         # 其他平台（Linux 等），回退到相对路径
         lib_dir = os.path.normpath(
-            os.path.join(script_path, "..", "..", "..", "TTS", "Lib")
+            os.path.join(script_path, "..", "..", "..","HB", "DaVinci TTS", "Lib")
         )
 
     # 3. 规范化一下路径（去掉多余分隔符或 ..）
