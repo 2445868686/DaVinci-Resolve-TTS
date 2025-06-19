@@ -497,7 +497,8 @@ except ImportError:
             "Blackmagic Design",
             "DaVinci Resolve",
             "Fusion",
-            "TTS",
+            "HB",
+            "DaVinci TTS",
             "Lib"
         )
     elif system == "Darwin":
@@ -508,7 +509,8 @@ except ImportError:
             "Blackmagic Design",
             "DaVinci Resolve",
             "Fusion",
-            "TTS",
+            "HB",
+            "DaVinci TTS",
             "Lib"
         )
     else:
