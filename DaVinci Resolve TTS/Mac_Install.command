@@ -4,8 +4,8 @@ set -euo pipefail
 # ———————— 配置变量 ————————
 PYTHON=python3
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WHEEL_DIR="/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/TTS/wheel"
-TARGET_DIR="/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/TTS/Lib"
+WHEEL_DIR="/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/HB/DaVinci TTS/wheel"
+TARGET_DIR="/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/HB/DaVinci TTS/Lib"
 PACKAGES=(requests azure-cognitiveservices-speech edge-tts pypinyin)
 PIP_MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple"
 
