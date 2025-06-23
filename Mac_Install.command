@@ -31,17 +31,30 @@ log INFO "Clearing pip cache..."
 $PYTHON -m pip cache purge >/dev/null 2>&1 || log WARN "pip cache purge failed or already empty."
 
 # ———————— 步骤 3：下载最新版本的包及依赖 ————————
-log INFO "Downloading packages: ${PACKAGES[*]} ..."
-$PYTHON -m pip download "${PACKAGES[@]}" \
+log INFO "Attempting download from official PyPI..."
+if $PYTHON -m pip download "${PACKAGES[@]}" \
     --dest "$WHEEL_DIR" \
     --only-binary=:all: \
     --use-feature=fast-deps \
     --no-cache-dir \
     --progress-bar=on \
-    -i "$PIP_MIRROR" \
-  || { log ERROR "Download failed. Check network or mirror settings."; exit 1; }
-
-log SUCCESS "Download completed. Wheels saved to: $WHEEL_DIR"
+    -i https://pypi.org/simple; then
+  log SUCCESS "Download succeeded using official PyPI."
+else
+  log WARN "Official PyPI failed. Trying TUNA mirror..."
+  if $PYTHON -m pip download "${PACKAGES[@]}" \
+      --dest "$WHEEL_DIR" \
+      --only-binary=:all: \
+      --use-feature=fast-deps \
+      --no-cache-dir \
+      --progress-bar=on \
+      -i "$PIP_MIRROR"; then
+    log SUCCESS "Download succeeded using TUNA mirror."
+  else
+    log ERROR "Download failed from both official and TUNA mirror. Please check your network."
+    exit 1
+  fi
+fi
 
 # ———————— 步骤 4：创建目标目录 & 修复权限 ————————
 log INFO "Preparing target installation directory: $TARGET_DIR"

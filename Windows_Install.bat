@@ -27,14 +27,23 @@ rem 2. Clear pip cache to avoid potential corruption
 echo [%DATE% %TIME%] Clearing pip cache
 python -m pip cache purge --disable-pip-version-check
 
-rem 3. Download all wheels (including dependencies)
+rem 3. Try download from official PyPI first
 echo.
-echo [%DATE% %TIME%] Downloading packages: %PACKAGES%
+echo [%DATE% %TIME%] Attempting to download from official PyPI...
 python -m pip download %PACKAGES% --dest "%WHEEL_DIR%" --only-binary=:all: ^
-    --use-feature=fast-deps --no-cache-dir %PIP_MIRROR%
+    --use-feature=fast-deps --no-cache-dir -i https://pypi.org/simple
 if errorlevel 1 (
-    echo [%DATE% %TIME%] ERROR: Failed to download packages. Please check network connectivity or package names.
-    pause & exit /b 1
+    echo [%DATE% %TIME%] WARNING: Failed to download from official PyPI. Trying TUNA mirror...
+    python -m pip download %PACKAGES% --dest "%WHEEL_DIR%" --only-binary=:all: ^
+        --use-feature=fast-deps --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple
+    if errorlevel 1 (
+        echo [%DATE% %TIME%] ERROR: Failed to download packages from both sources. Check your network or package names.
+        pause & exit /b 1
+    ) else (
+        echo [%DATE% %TIME%] SUCCESS: Packages downloaded via TUNA mirror to "%WHEEL_DIR%"
+    )
+) else (
+    echo [%DATE% %TIME%] SUCCESS: Packages downloaded via official PyPI to "%WHEEL_DIR%"
 )
 
 rem 4. Create target installation directory if it does not exist
