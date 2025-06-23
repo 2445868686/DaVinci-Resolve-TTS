@@ -12,8 +12,8 @@ Y_CENTER = (SCREEN_HEIGHT - WINDOW_HEIGHT) // 2
 
 SCRIPT_KOFI_URL="https://ko-fi.com/heiba"
 SCRIPT_WX_URL = "https://mp.weixin.qq.com/s?__biz=MzUzMTk2MDU5Nw==&mid=2247484626&idx=1&sn=e5eef7e48fbfbf37f208ed9a26c5475a&chksm=fabbc2a8cdcc4bbefcb7f6c72a3754335c25ec9c3e408553ec81c009531732e82cbab923276c#rd"
-AIRANSLATOR_KOFI_URL         = ""
-AIRANSLATOR_TAOBAO_URL       = ""
+AIRANSLATOR_KOFI_URL         = "https://ko-fi.com/s/706feb3730"
+AIRANSLATOR_TAOBAO_URL       = "https://item.taobao.com/item.htm?id=941978471966&pisk=gmixjtVnkLBAk6oYEx8lsCfgBuJoDUD42jkCj5Vc5bh-CjN0srasFYw3hsw_CAw_XbGM3SD6gfnTNoaZo5V06lHZ9LAHxHDq3lrXtBxhSo87Vk5_CP1GNzwTX-iubvUx3lr6tTj6-HHqgqUTVGw_FLegIs1s1rt7F7yFhlNb5__7d7Z_frafV_wUKisbGS9JVJyOhss_1_Z7nJb_flGsFLeaN-Z_fUXJ676bsG3h-ZNfaUaffGi8HzTon7tqd0wx7WHjDGs67-UYOxNJGOnwyPhYk0xAT-3Spbyx_HS4cP3jRoi99nESL4cbefOdW7gK0cUnDBQUGmPZ9ogJNiE_0JHT-4v1J70sU0U-DeXaUmDs0yqBYsNirvnTBcRw2XHjM2aIcsIPyDmLlof39RbXeLQN7rwPjSA3qzqXeBe8tKKO7NzyU8FHeLQN7rwzeWvvXN7azL5..&spm=a21xtw.29178619.0.0"
 
 OPENAI_FM = "https://openai.fm"
 MINIMAX_PREW_URL = "https://www.minimax.io/audio/voices"
@@ -3441,7 +3441,7 @@ def on_aitranslator_button(ev):
         webbrowser.open(AIRANSLATOR_KOFI_URL)
     else :
         webbrowser.open(AIRANSLATOR_TAOBAO_URL)
-win.On.TTSButton.Clicked = on_aitranslator_button
+win.On.AITranslatorButton.Clicked = on_aitranslator_button
 
 def on_close(ev):
     close_and_save(settings_file)
