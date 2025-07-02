@@ -27,7 +27,9 @@ import time
 import wave
 import json
 import webbrowser
-
+from xml.dom import minidom
+import xml.etree.ElementTree as ET
+from typing import Dict, Any, List, Optional
 try:
     import requests
     from requests.adapters import HTTPAdapter
@@ -78,7 +80,7 @@ except ImportError:
         sys.path.insert(0, lib_dir)
     else:
         # 如果路径不对，可打印日志帮助调试
-        print(f"Warning: TTS/Lib 目录不存在：{lib_dir}", file=sys.stderr)
+        print(f"Warning: The TTS/Lib directory doesn’t exist:：{lib_dir}", file=sys.stderr)
 
     try:
         import requests
@@ -88,25 +90,7 @@ except ImportError:
         import edge_tts
         print(lib_dir)
     except ImportError as e:
-        print("依赖导入失败，请确保所有依赖已打包至 Lib 目录中：", lib_dir, "\n错误信息：", e)
-
-from xml.dom import minidom
-import xml.etree.ElementTree as ET
-
-from typing import Dict, Any, List, Optional
-
-script_path = os.path.dirname(os.path.abspath(sys.argv[0]))
-
-# 创建带重试机制的 session（放在模块初始化，整个脚本共享）
-session = requests.Session()
-retries = Retry(
-    total=3,                 # 最多重试3次
-    backoff_factor=0.5,       # 每次重试等待时间逐步增加
-    status_forcelist=[500, 502, 503, 504],  # 服务器错误才重试
-    allowed_methods=["GET", "POST"]         # 限定方法
-)
-session.mount('http://', HTTPAdapter(max_retries=retries))
-session.mount('https://', HTTPAdapter(max_retries=retries))
+        print("Dependency import failed—please make sure all dependencies are bundled into the Lib directory:", lib_dir, "\nError message:", e)
 
 try:
     import DaVinciResolveScript as dvr_script
@@ -133,6 +117,19 @@ except ImportError:
     except ImportError as e:
         raise ImportError("Unable to import DaVinciResolveScript or python_get_resolve after adding paths") from e
 
+script_path = os.path.dirname(os.path.abspath(sys.argv[0]))
+
+# 创建带重试机制的 session（放在模块初始化，整个脚本共享）
+session = requests.Session()
+retries = Retry(
+    total=3,                 # 最多重试3次
+    backoff_factor=0.5,       # 每次重试等待时间逐步增加
+    status_forcelist=[500, 502, 503, 504],  # 服务器错误才重试
+    allowed_methods=["GET", "POST"]         # 限定方法
+)
+session.mount('http://', HTTPAdapter(max_retries=retries))
+session.mount('https://', HTTPAdapter(max_retries=retries))
+
 def check_or_create_file(file_path):
     if os.path.exists(file_path):
         pass
@@ -148,6 +145,214 @@ def load_resource(file_path: str) -> str:
     # 用标准的 open 读取
     with open(file_path, 'r', encoding='utf-8') as f:
         return f.read()
+
+class MiniMaxProvider:
+    """
+    Handles all interactions with the MiniMax TTS and Voice Clone APIs.
+    """
+    BASE_URL = "https://api.minimax.chat"
+    BASE_URL_INTL = "https://api.minimaxi.chat"
+
+    def __init__(self, api_key: str, group_id: str, is_intl: bool = False):
+        if not api_key or not group_id:
+            raise ValueError("API key and Group ID are required for MiniMaxProvider.")
+        
+        self.api_key = api_key
+        self.group_id = group_id
+        self.base_url = self.BASE_URL_INTL if is_intl else self.BASE_URL
+        
+        self.session = requests.Session()
+        self.session.headers.update({
+            "Authorization": f"Bearer {self.api_key}",
+        })
+
+    def _make_url(self, path: str) -> str:
+        return f"{self.base_url}{path}?GroupId={self.group_id}"
+
+    def _handle_api_error(self, response_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Parses a standard MiniMax error response and returns a structured error dict."""
+        base_resp = response_data.get("base_resp", {})
+        status_code = base_resp.get("status_code")
+        status_msg = base_resp.get("status_msg", "Unknown error")
+        error_message = f"API Error {status_code}: {status_msg}"
+        print(error_message)
+        return {"error_code": status_code, "error_message": error_message}
+
+    def synthesize(self, text: str, model: str, voice_id: str, speed: float, vol: float, pitch: int, file_format: str, subtitle_enable: bool = False, emotion: Optional[str] = None) -> Dict[str, Any]:
+        """Synthesizes speech and returns audio content and subtitle URL."""
+        url = self._make_url("/v1/t2a_v2")
+        self.session.headers["Content-Type"] = "application/json"
+
+        payload = {
+            "model": model, "text": text, "stream": False, "subtitle_enable": subtitle_enable,
+            "voice_setting": {"voice_id": voice_id, "speed": speed, "vol": vol, "pitch": pitch},
+            "audio_setting": {"sample_rate": 32000, "bitrate": 128000, "format": file_format, "channel": 2}
+        }
+        if emotion and emotion not in ["默认", "Default"]:
+            payload["voice_setting"]["emotion"] = emotion
+
+        print(f"Sending payload to MiniMax: {payload}")
+
+        try:
+            response = self.session.post(url, json=payload, timeout=(5, 60))
+            response.raise_for_status()
+            resp_data = response.json()
+
+            if resp_data.get("base_resp", {}).get("status_code") != 0:
+                error_info = self._handle_api_error(resp_data)
+                return {"audio_content": None, "subtitle_url": None, **error_info}
+
+            data = resp_data.get("data", {})
+            audio_hex = data.get("audio")
+            if not audio_hex:
+                return {"audio_content": None, "subtitle_url": None, "error_code": -1, "error_message": "No audio data in response."}
+
+            return {"audio_content": bytes.fromhex(audio_hex), "subtitle_url": data.get("subtitle_file"), "error_code": None, "error_message": None}
+        except (requests.exceptions.RequestException, json.JSONDecodeError, KeyError) as e:
+            error_message = f"Failed during synthesis request: {e}"
+            print(error_message)
+            return {"audio_content": None, "subtitle_url": None, "error_code": -1, "error_message": error_message}
+
+    def upload_file_for_clone(self, file_path: str) -> Dict[str, Any]:
+        """Uploads a file for voice cloning."""
+        url = self._make_url("/v1/files/upload")
+        self.session.headers.pop("Content-Type", None)
+
+        try:
+            with open(file_path, 'rb') as f:
+                files = {'file': f}
+                data = {'purpose': 'voice_clone'}
+                response = self.session.post(url, data=data, files=files, timeout=300)
+                response.raise_for_status()
+                resp_data = response.json()
+
+            if resp_data.get("base_resp", {}).get("status_code") != 0:
+                error_info = self._handle_api_error(resp_data)
+                return {"file_id": None, **error_info}
+            
+            return {"file_id": resp_data.get("file", {}).get("file_id"), "error_code": None, "error_message": None}
+        except (requests.exceptions.RequestException, IOError, json.JSONDecodeError, KeyError) as e:
+            error_message = f"Failed during file upload: {e}"
+            print(error_message)
+            return {"file_id": None, "error_code": -1, "error_message": error_message}
+
+    def submit_clone_job(self, file_id: str, voice_id: str, need_nr: bool, need_vn: bool, text: Optional[str] = None) -> Dict[str, Any]:
+        """Submits a voice clone job."""
+        url = self._make_url("/v1/voice_clone")
+        self.session.headers["Content-Type"] = "application/json"
+
+        payload = {"file_id": file_id, "voice_id": voice_id, "need_noise_reduction": need_nr, "need_volume_normalization": need_vn}
+        if text:
+            payload.update({"text": text, "model": "speech-02-hd"})
+        print(payload)
+        try:
+            response = self.session.post(url, json=payload, timeout=60)
+            response.raise_for_status()
+            resp_data = response.json()
+
+            if resp_data.get("base_resp", {}).get("status_code") != 0:
+                error_info = self._handle_api_error(resp_data)
+                return {"demo_url": None, **error_info}
+            
+            return {"demo_url": resp_data.get("demo_audio"), "error_code": None, "error_message": None}
+        except (requests.exceptions.RequestException, json.JSONDecodeError, KeyError) as e:
+            error_message = f"Failed during clone submission: {e}"
+            print(error_message)
+            return {"demo_url": None, "error_code": -1, "error_message": error_message}
+
+    def download_media(self, url: str) -> Optional[bytes]:
+        """Downloads content from a given URL (for subtitles or demo audio)."""
+        if not url:
+            return None
+        try:
+            # Use a clean session without auth headers for public URLs
+            response = requests.get(url, timeout=60)
+            response.raise_for_status()
+            return response.content
+        except requests.exceptions.RequestException as e:
+            print(f"Failed to download media from {url}: {e}")
+            return None
+        
+class OpenAIProvider:
+    """
+    Handles all interactions with the OpenAI TTS API.
+    """
+    def __init__(self, api_key, base_url=None):
+        """
+        Initializes the OpenAI provider.
+
+        Args:
+            api_key (str): The OpenAI API key.
+            base_url (str, optional): The base URL for the API. 
+                                      Defaults to "https://api.openai.com/v1".
+        
+        Raises:
+            ValueError: If the API key is not provided.
+        """
+        if not api_key:
+            raise ValueError("API key is required for OpenAIProvider.")
+        
+        self.api_key = api_key
+        self.base_url = (base_url or "https://api.openai.com/").strip().rstrip('/')
+        
+        self.session = requests.Session()
+        self.session.headers.update({
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        })
+
+    def synthesize(self, text, model, voice, speed, file_format, instructions=None):
+        """
+        Synthesizes speech using the OpenAI API.
+
+        Args:
+            text (str): The text to synthesize.
+            model (str): The TTS model to use.
+            voice (str): The voice to use.
+            speed (float): The speech speed.
+            file_format (str): The desired audio format (e.g., 'mp3').
+            instructions (str, optional): Instructions for models that support it.
+
+        Returns:
+            bytes: The audio content as bytes if successful, otherwise None.
+        """
+        url = f"{self.base_url}/v1/audio/speech"
+        payload = {
+            "model": model,
+            "input": text,
+            "voice": voice,
+            "response_format": file_format,
+            "speed": speed
+        }
+        if model not in ["tts-1", "tts-1-hd"] and instructions:
+            payload["instructions"] = instructions
+
+        print(f"Sending payload to OpenAI: {payload}")
+
+        try:
+            response = self.session.post(url, json=payload, timeout=90)
+            response.raise_for_status()  # Raises HTTPError for bad responses (4xx or 5xx)
+
+            # Check if the response content is actually audio
+            content_type = response.headers.get('Content-Type', '')
+            if 'audio' not in content_type:
+                # The API returned a success status but not audio (e.g., a JSON error)
+                print(f"API Error: Expected audio, but received {content_type}")
+                print(f"Response content: {response.text}")
+                return None
+
+            return response.content
+        except requests.exceptions.RequestException as e:
+            print(f"OpenAI API request failed: {e}")
+            if e.response is not None:
+                # Try to print JSON error if possible, otherwise raw text
+                try:
+                    error_details = e.response.json()
+                    print(f"Error details: {error_details}")
+                except ValueError:
+                    print(f"Error details: {e.response.text}")
+            return None
+
 
 config_dir = os.path.join(script_path, 'config')
 settings_file = os.path.join(config_dir, 'TTS_settings.json')
@@ -736,7 +941,7 @@ openai_config_window = dispatcher.AddWindow(
                 ui.Label({"ID": "OpenAILabel","Text": "填写OpenAI API信息", "Alignment": {"AlignHCenter": True, "AlignVCenter": True}}),
                 ui.HGroup({"Weight": 1}, [
                     ui.Label({"ID": "OpenAIBaseURLLabel", "Text": "Base URL", "Alignment": {"AlignRight": False}, "Weight": 0.2}),
-                    ui.LineEdit({"ID": "OpenAIBaseURL", "Text":"","PlaceholderText": "https://api.openai.com/v1", "Weight": 0.8}),
+                    ui.LineEdit({"ID": "OpenAIBaseURL", "Text":"","PlaceholderText": "https://api.openai.com", "Weight": 0.8}),
                 ]),
                 ui.HGroup({"Weight": 1}, [
                     ui.Label({"ID": "OpenAIApiKeyLabel", "Text": "密钥", "Alignment": {"AlignRight": False}, "Weight": 0.2}),
@@ -1159,7 +1364,6 @@ def return_voice_name(name):
             if voice[voice_name].get("Name") == name:
                 return voice_name
     return None
-
 
 # 填充ComboBox
 minimax_models = ["speech-02-hd","speech-02-turbo","speech-01-hd","speech-01-turbo", "speech-01-240228","speech-01-turbo-240228",]
@@ -2391,7 +2595,7 @@ def on_play_button_clicked(ev):
     items["PlayButton"].Enabled = True  
 
 win.On.PlayButton.Clicked = on_play_button_clicked
-
+#============== MINIMAX ====================#
 def play_audio_segment(pcm_file, json_file, voice_name, sample_rate=32000, channels=2, sample_width=2):
     try:
         # 读取 JSON 文件
@@ -2436,208 +2640,6 @@ def play_audio_segment(pcm_file, json_file, voice_name, sample_rate=32000, chann
         os.remove(wav_file)
         print(f"播放失败: {e}")
 
-def on_minimax_preview_button_click(ev):
-    if minimax_items["intlCheckBox"].Checked:
-        webbrowser.open(MINIMAX_PREW_URL)
-    else:
-        webbrowser.open(MINIMAXI_PREW_URL)
-"""
-    try:
-        # 请确保文件路径正确
-        pcm_file = os.path.join(config_dir, "minimax_voice_data.pcm")  # 拼接完整路径
-        json_file = os.path.join(config_dir, "minimax_voice_data.json")
-        # 检查文件是否存在
-        if not os.path.exists(pcm_file):
-            show_warning_message(STATUS_MESSAGES.download_pcm)
-            return
-        if not os.path.exists(json_file):
-            show_warning_message(STATUS_MESSAGES.download_json)
-            return
-        voice_name = items["minimaxVoiceCombo"].CurrentText  # 目标音色
-
-        voice_id = next(
-            (v["voice_name"] for v in minimax_voices 
-            if voice_name == v["voice_name"] or voice_name == v["voice_id"]),
-            ""
-        )
-
-        # 播放音频
-        play_audio_segment(pcm_file, json_file, voice_id)
-
-    except Exception as e:
-        print(f"播放失败: {e}")
-"""      
-win.On.minimaxPreviewButton.Clicked = on_minimax_preview_button_click
-
-def process_minimax_request(text_func, timeline_func):
-    """
-    通用处理函数，用于 Minimax 请求和音频处理
-    :param text_func: 函数，返回文本内容
-    :param timeline_func: 函数，返回 (start_frame, end_frame) 时间线帧信息
-    """
-    # 获取输入字段的值
-    if minimax_items["minimaxGroupID"].Text == '' or minimax_items["minimaxApiKey"].Text == '':
-        show_warning_message(STATUS_MESSAGES.enter_api_key)
-        update_status(STATUS_MESSAGES.synthesis_failed)
-        return
-    group_id = minimax_items["minimaxGroupID"].Text
-    api_key = minimax_items["minimaxApiKey"].Text
-    model = items["minimaxModelCombo"].CurrentText
-    text = text_func()
-    if minimax_items["intlCheckBox"].Checked:
-        url = f"https://api.minimaxi.chat/v1/t2a_v2?GroupId={group_id}"
-    else:
-        url = f"https://api.minimax.chat/v1/t2a_v2?GroupId={group_id}"
-    
-    # 获取 voice_id 和 emotion
-    voice_name = items["minimaxVoiceCombo"].CurrentText  # 目标音色
-
-    voice_id = next(
-        (v["voice_id"] for v in minimax_voices 
-        if voice_name == v["voice_name"] or voice_name == v["voice_id"]),
-        ""
-    )
-    if not voice_id:
-        voice_id = next(
-            (v["voice_id"] for v in minimax_clone_voices 
-            if voice_name == v["voice_name"] or voice_name == v["voice_id"]),
-            ""
-        )
-
-    lang_id = items["minimaxLanguageCombo"].CurrentText
-    emotion_name = items["minimaxEmotionCombo"].CurrentText
-    emotion_value = next((en for cn, en in emotions if emotion_name in (cn, en)), "")
-    
-    # 其他参数
-    speed = items["minimaxRateSpinBox"].Value
-    vol = items["minimaxVolumeSpinBox"].Value
-    pitch = items["minimaxPitchSpinBox"].Value
-    subtitle_enable = items["minimaxSubtitleCheckBox"].Checked
-    sample_rate = 32000
-    bitrate = 128000
-    channel = 2
-    file_format = items["minimaxFormatCombo"].CurrentText
-
-    # 构建请求的Payload
-    payload = {
-        "model": model,
-        "text": text,
-        "stream": False,
-        "subtitle_enable":subtitle_enable,
-        #"language_boost":lang_id,
-        "voice_setting": {
-            "voice_id": voice_id,
-            "speed": speed,
-            "vol": vol,
-            "pitch": pitch,
-            "english_normalization":True,
-            "latex_read":True,
-        },
-        "audio_setting": {
-            "sample_rate": sample_rate,
-            "bitrate": bitrate,
-            "format": file_format,
-            "channel": channel
-        }
-    }
-
-    # 如果 emotion 不为空，添加到 voice_setting 中
-    if emotion_value not in ["默认", "Default"]:
-        payload["voice_setting"]["emotion"] = emotion_value
-
-    # 转换为 JSON 格式
-    payload_json = json.dumps(payload)
-
-    headers = {
-        'Authorization': f'Bearer {api_key}',
-        'Content-Type': 'application/json'
-    }
-
-    print(payload)
-    update_status(STATUS_MESSAGES.synthesizing)
-
-    try:
-        resp = session.post(url, headers=headers, data=payload_json, timeout=(5, 60))
-
-        resp.raise_for_status()
-        resp_data = resp.json()
-        base_resp = resp_data.get("base_resp", {})
-        code = str(base_resp.get("status_code", ""))
-        # 仅当 code 非 "0" 时才弹警告
-        if code != "0":
-            attr = f"error_{code}"
-            status_tuple = getattr(
-                STATUS_MESSAGES,
-                attr,
-                STATUS_MESSAGES.error_1000
-            )
-            show_warning_message(status_tuple)
-            update_status(status_tuple)
-            raise RuntimeError(f"合成失败，状态码 {code}")
-
-        data = resp_data.get("data")
-        if not data:
-            update_status(STATUS_MESSAGES.synthesis_failed)
-            print("响应中未包含 'data' 字段:", resp_data)
-            return
-  
-        # 处理音频数据
-        audio_data = bytes.fromhex(data.get("audio", ""))
-        filename = generate_filename(items["Path"].Text, text, f".{file_format}")
-        print(filename)
-    
-        with open(filename, 'wb') as f:
-            f.write(audio_data)
-        #print(f"音频已保存到 {filename}")
-    
-        if os.path.exists(filename):
-            start_frame, end_frame = timeline_func()
-            add_to_media_pool_and_timeline(start_frame, end_frame, filename)
-            #print(f"成功将文件添加到媒体池: {filename}")
-        else:
-            update_status(STATUS_MESSAGES.audio_save_failed)
-            print("音频文件保存失败")
-            return
-    
-        # 下载字幕文件及转换为 SRT
-        subtitle_url = data.get("subtitle_file")
-        if subtitle_url:
-            #print("字幕文件URL:", subtitle_url)
-            try:
-                subtitle_response = session.get(subtitle_url, timeout=(5, 60))
-                subtitle_response.raise_for_status()  # 检查响应状态
-            
-                subtitle_filename = os.path.splitext(filename)[0] + ".json"
-                with open(subtitle_filename, 'wb') as f:
-                    f.write(subtitle_response.content)
-                #print(f"字幕文件已保存到 {subtitle_filename}")
-
-                # 读取 JSON 并转换为 SRT 格式
-                with open(subtitle_filename, 'r', encoding='utf-8') as f:
-                    json_data = json.load(f)
-                srt_filename = os.path.splitext(subtitle_filename)[0] + ".srt"
-                json_to_srt(json_data, srt_filename)
-                # 成功生成 SRT 后，删除 JSON 文件
-                os.remove(subtitle_filename)
-                import_srt_to_timeline(srt_filename)
-            except (requests.exceptions.ChunkedEncodingError) as e:
-                print(f"字幕处理出错: {e}")
-        else:
-            print("响应中未包含 'subtitle_file' 字段")
-        
-    except requests.exceptions.RequestException as e:
-        print(f"请求失败: {e}")
-        update_status(STATUS_MESSAGES.synthesis_failed)
-    except requests.exceptions.ChunkedEncodingError as e:
-        print(f"连接中断或数据读取不完整（ChunkedEncodingError）: {e}")
-        update_status(STATUS_MESSAGES.synthesis_failed)
-    except json.JSONDecodeError as e:
-        print(f"JSON解析失败: {e}")
-        update_status(STATUS_MESSAGES.synthesis_failed)
-    except KeyError as e:
-        print(f"响应中缺少关键字段: {e}")
-        update_status(STATUS_MESSAGES.synthesis_failed)
-
 def json_to_srt(json_data, srt_path):
     """
     将JSON格式的字幕信息转换为 .srt 文件并保存。
@@ -2664,554 +2666,6 @@ def json_to_srt(json_data, srt_path):
     except Exception as e:
         print(f"保存 SRT 文件失败: {e}")
 
-def process_openai_request(text_func, timeline_func):
-    update_status(STATUS_MESSAGES.synthesizing)
-    save_path = items["Path"].Text
-    if not save_path:
-        show_warning_message(STATUS_MESSAGES.select_save_path)
-        return False
-
-    base_url = openai_items["OpenAIBaseURL"].Text.strip().rstrip('/') or "https://api.openai.com/v1"
-    api_key  = openai_items["OpenAIApiKey"].Text
-    
-    if not api_key:
-        show_warning_message(STATUS_MESSAGES.enter_api_key)
-        update_status(STATUS_MESSAGES.synthesis_failed)
-        return False
-
-    model       = items["OpenAIModelCombo"].CurrentText
-    text        = text_func()
-    voice_name  = items["OpenAIVoiceCombo"].CurrentText
-    speed       = items["OpenAIRateSpinBox"].Value
-    file_format = items["OpenAIFormatCombo"].CurrentText
-    filename    = generate_filename(save_path, text, f".{file_format}")
-
-    url = f"{base_url}/audio/speech"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-    payload = {
-        "model": model,
-        "input": text,
-        "voice": voice_name,
-        "response_format": file_format,
-        "speed": speed
-    }
-    
-    if model not in ["tts-1", "tts-1-hd"]:
-        instructions = items["OpenAIInstructionText"].PlainText.strip()
-        if instructions:
-            payload["instructions"] = instructions
-    print(payload)
-    try:
-        resp = requests.post(url, headers=headers, json=payload)
-    except Exception as e:
-        print(f"请求 OpenAI 失败：{e}")
-        update_status(STATUS_MESSAGES.synthesis_failed)
-        return False
-
-    if resp.status_code == 200:
-        try:
-            with open(filename, "wb") as f:
-                for chunk in resp.iter_content(chunk_size=8192):
-                    if chunk:
-                        f.write(chunk)
-            if os.path.exists(filename):
-                start_frame, end_frame = timeline_func()
-                add_to_media_pool_and_timeline(start_frame, end_frame, filename)
-                update_status(STATUS_MESSAGES.loaded_to_timeline)
-                return True
-            else:
-                update_status(STATUS_MESSAGES.audio_save_failed)
-                print("音频文件保存失败")
-        except Exception as e:
-            print(f"写入文件失败：{e}")
-            update_status(STATUS_MESSAGES.synthesis_failed)
-    else:
-        try:
-            error_detail = resp.json().get("error", resp.text)
-        except Exception:
-            error_detail = resp.text
-        print(f"OpenAI 返回错误 (HTTP {resp.status_code})：{error_detail}")
-        update_status(STATUS_MESSAGES.synthesis_failed)
-
-    return False
-
-# 针对字幕的处理函数
-def on_openai_fromsub_button_clicked(ev):
-    project_manager = resolve.GetProjectManager()
-    current_project = project_manager.GetCurrentProject()
-    current_timeline = current_project.GetCurrentTimeline()
-    if not current_timeline:
-        show_warning_message(STATUS_MESSAGES.create_timeline)
-        return False
-
-    process_openai_request(
-        text_func=lambda: get_current_subtitle(current_timeline)[0],
-        timeline_func=lambda: get_current_subtitle(current_timeline)[1:]
-        )
-
-win.On.OpenAIFromSubButton.Clicked = on_openai_fromsub_button_clicked
-
-def on_openai_fromtxt_button_clicked(ev):
-    project_manager = resolve.GetProjectManager()
-    current_project = project_manager.GetCurrentProject()
-    current_timeline = current_project.GetCurrentTimeline()
-    if not current_timeline:
-        show_warning_message(STATUS_MESSAGES.create_timeline)
-        return False
-
-    process_openai_request(
-        text_func=lambda: items["OpenAIText"].PlainText,
-        timeline_func=lambda: (
-            # 动态获取当前帧和时间线结束帧
-            timecode_to_frames(
-                current_timeline.GetCurrentTimecode(),
-                float(current_timeline.GetSetting("timelineFrameRate"))
-            ),
-            current_timeline.GetEndFrame()
-        )
-    )
- 
-win.On.OpenAIFromTxtButton.Clicked = on_openai_fromtxt_button_clicked
-
-# 针对字幕的处理函数
-def on_minimax_fromsub_button_clicked(ev):
-    project_manager = resolve.GetProjectManager()
-    current_project = project_manager.GetCurrentProject()
-    current_timeline = current_project.GetCurrentTimeline()
-    if not current_timeline:
-        show_warning_message(STATUS_MESSAGES.create_timeline)
-        return
-    if items["Path"].Text == '':
-        show_warning_message(STATUS_MESSAGES.select_save_path)
-        return
-    items["minimaxSubtitleCheckBox"].Checked = False
-    process_minimax_request(
-        text_func=lambda: get_current_subtitle(current_timeline)[0],
-        timeline_func=lambda: get_current_subtitle(current_timeline)[1:]
-    )
-win.On.minimaxFromSubButton.Clicked = on_minimax_fromsub_button_clicked
-
-# 针对文本框输入的处理函数
-def on_minimax_fromtxt_button_clicked(ev):
-    project_manager = resolve.GetProjectManager()
-    current_project = project_manager.GetCurrentProject()
-    current_timeline = current_project.GetCurrentTimeline()
-    if not current_timeline:
-        show_warning_message(STATUS_MESSAGES.create_timeline)
-        return
-    if items["Path"].Text == '':
-        show_warning_message(STATUS_MESSAGES.select_save_path)
-        return
-    process_minimax_request(
-        text_func=lambda: items["minimaxText"].PlainText,
-        timeline_func=lambda: (
-            # 动态获取当前帧和时间线结束帧
-            timecode_to_frames(
-                current_timeline.GetCurrentTimecode(),
-                float(current_timeline.GetSetting("timelineFrameRate"))
-            ),
-            current_timeline.GetEndFrame()
-        )
-    )
-win.On.minimaxFromTxtButton.Clicked = on_minimax_fromtxt_button_clicked
-
-def on_break_button_clicked(ev):
-    breaktime =  items["BreakSpinBox"].Value
-    # 插入<break>标志
-    items["AzureTxt"].InsertPlainText(f'<break time="{breaktime}ms" />')
-
-win.On.BreakButton.Clicked = on_break_button_clicked
-
-def on_minimax_break_button_clicked(ev):
-    breaktime =  items["minimaxBreakSpinBox"].Value/1000
-    # 插入<break>标志
-    items["minimaxText"].InsertPlainText(f'<#{breaktime}#>')
-
-win.On.minimaxBreakButton.Clicked = on_minimax_break_button_clicked
-
-
-def on_alphabet_button_clicked(ev):
-    items["AzureTxt"].Copy()
-    from pypinyin import pinyin, Style
-
-    def convert_to_pinyin_with_tone(text):
-        pinyin_list = pinyin(text, style=Style.TONE3, heteronym=False)
-        pinyin_with_tone = []
-
-        for word in pinyin_list:
-            if word[0][-1].isdigit():  # 如果最后一个字符是数字（声调）
-                pinyin_with_tone.append(f"{word[0][:-1]} {word[0][-1]}")
-            else:  # 否则，表示是轻声
-                pinyin_with_tone.append(f"{word[0]} 5")
-        
-        return ' '.join(pinyin_with_tone)
-
-    alphabet = dispatcher.AddWindow(
-        {
-            "ID": 'Alphabet',
-            "WindowTitle": '多音字',
-            "Geometry": [750, 400, 500, 150],
-            "Spacing": 10,
-        },
-        [   
-            ui.VGroup(
-                [
-                    ui.HGroup(
-                        {"Weight": 1},
-                        [
-                            ui.LineEdit({"ID": 'AlphaTxt', "Text": ""}),
-                        ]
-                    ),
-                    ui.HGroup(
-                        {"Weight": 0},
-                        [
-                            ui.Label({"ID": 'msgLabel', "Text": """例如，'li 4 zi 5' 表示 '例子'。数字代表拼音声调。'5' 代表轻声。\n若要控制儿化音，请在拼音的声调前插入 "r"。例如，"hou r 2 shan 1" 代表“猴儿山”。"""}),
-                        ]
-                    ),
-                    ui.HGroup(
-                        {
-                            "Weight": 0,
-                        },
-                        [
-                            ui.Button({"ID": 'OkButton', "Text": 'OK'}),
-                        ]
-                    ),
-                ]
-            ),
-        ]
-    )
-
-    ahb = alphabet.GetItems()
-    ahb["AlphaTxt"].Text =  ahb["AlphaTxt"].Paste()
-    original_text = ahb["AlphaTxt"].Text
-    convert_test= convert_to_pinyin_with_tone(re.sub(r'[^\u4e00-\u9fa5]', '', original_text))
-    ahb["AlphaTxt"].Text = convert_test
-
-    def on_ok_button_clicked(ev):
-        replace_text = ahb["AlphaTxt"].Text
-        replace_text = '' if replace_text == '' else (original_text if replace_text == convert_test else f"<phoneme alphabet=\"sapi\" ph=\"{ahb['AlphaTxt'].Text}\">{original_text}</phoneme>")
-        items["AzureTxt"].InsertPlainText(replace_text)
-        dispatcher.ExitLoop()
-        
-    alphabet.On.OkButton.Clicked = on_ok_button_clicked
-    def on_close(ev):
-        dispatcher.ExitLoop()
-    alphabet.On.Alphabet.Close = on_close
-    alphabet.Show()
-    dispatcher.RunLoop()
-    alphabet.Hide()
-
-win.On.AlphabetButton.Clicked = on_alphabet_button_clicked
-
-def on_reset_button_clicked(ev):
-
-    items["LanguageCombo"].CurrentIndex = default_settings["LANGUAGE"]
-    items["NameTypeCombo"].CurrentIndex = default_settings["TYPE"]
-    items["NameCombo"].CurrentIndex = default_settings["NAME"]
-    items["RateSpinBox"].Value = default_settings["RATE"]
-    items["BreakSpinBox"].Value = default_settings["BREAKTIME"]
-    items["PitchSpinBox"].Value = default_settings["PITCH"]
-    items["VolumeSpinBox"].Value = default_settings["VOLUME"]
-    items["StyleCombo"].CurrentIndex = default_settings["STYLE"]
-    items["StyleDegreeSpinBox"].Value = default_settings["STYLEDEGREE"]
-    items["OutputFormatCombo"].CurrentIndex = default_settings["OUTPUT_FORMATS"]
-
-win.On.ResetButton.Clicked = on_reset_button_clicked
-
-def on_minimax_reset_button_clicked(ev):
-    """
-    重置所有输入控件为默认设置。
-    """
-    items["minimaxModelCombo"].CurrentIndex = default_settings["minimax_Model"]
-    items["minimaxVoiceCombo"].CurrentIndex = default_settings["minimax_Voice"]
-    items["minimaxLanguageCombo"].CurrentIndex = default_settings["minimax_Language"]
-    items["minimaxEmotionCombo"].CurrentIndex = default_settings["minimax_Emotion"]
-    items["minimaxRateSpinBox"].Value = default_settings["minimax_Rate"]
-    items["minimaxVolumeSpinBox"].Value = default_settings["minimax_Volume"]
-    items["minimaxPitchSpinBox"].Value = default_settings["minimax_Pitch"]
-    items["minimaxFormatCombo"].CurrentIndex=default_settings["minimax_Format"]
-    items["minimaxBreakSpinBox"].Value = default_settings["minimax_Break"]
-    items["minimaxSubtitleCheckBox"].Checked = default_settings["minimax_SubtitleCheckBox"]
-
-# 绑定重置按钮事件
-win.On.minimaxResetButton.Clicked = on_minimax_reset_button_clicked
-
-def on_openai_reset_button_clicked(ev):
-    """
-    重置所有输入控件为默认设置。
-    """
-    items["OpenAIModelCombo"].CurrentIndex = default_settings["OpenAI_Model"]
-    items["OpenAIVoiceCombo"].CurrentIndex = default_settings["OpenAI_Voice"]
-    items["OpenAIRateSpinBox"].Value = default_settings["minimax_Rate"]
-    items["OpenAIFormatCombo"].CurrentIndex = default_settings["OpenAI_Format"]
-    items["OpenAIInstructionText"].Text = default_settings["OpenAI_Instruction"]
-    items["OpenAIPresetCombo"].CurrentIndex = default_settings["OpenAI_Preset"]
-    
-# 绑定重置按钮事件
-win.On.OpenAIResetButton.Clicked = on_openai_reset_button_clicked
-
-def on_browse_button_clicked(ev):
-    current_path = items["Path"].Text
-    selected_path = fusion.RequestDir(current_path)
-    if selected_path:
-        # 创建以项目名称命名的子目录
-        project_subdir = os.path.join(selected_path, f"{current_project.GetName()}_TTS")
-        try:
-            os.makedirs(project_subdir, exist_ok=True)
-            items["Path"].Text = str(project_subdir)
-            print(f"Directory created: {project_subdir}")
-        except Exception as e:
-            print(f"Failed to create directory: {e}")
-    else:
-        print("No directory selected or the request failed.")
-
-win.On.Browse.Clicked = on_browse_button_clicked
-
-def close_and_save(settings_file):
-    settings = {
-        "API_KEY": azure_items["ApiKey"].Text,
-        "REGION": azure_items["Region"].Text,
-        "LANGUAGE": items["LanguageCombo"].CurrentIndex,
-        "TYPE": items["NameTypeCombo"].CurrentIndex,
-        "NAME": items["NameCombo"].CurrentIndex,
-        "RATE": items["RateSpinBox"].Value,
-        "PITCH": items["PitchSpinBox"].Value,
-        "VOLUME": items["VolumeSpinBox"].Value,
-        "STYLEDEGREE": items["StyleDegreeSpinBox"].Value,
-        "OUTPUT_FORMATS": items["OutputFormatCombo"].CurrentIndex,
-        "UNUSE_API":azure_items["UnuseAPICheckBox"].Checked,
-
-        "minimax_API_KEY": minimax_items["minimaxApiKey"].Text,
-        "minimax_GROUP_ID": minimax_items["minimaxGroupID"].Text,
-        "minimax_intlCheckBox":minimax_items["intlCheckBox"].Checked,
-        "Path": items["Path"].Text,
-        "minimax_Model": items["minimaxModelCombo"].CurrentIndex,
-        #"Text": items["minimaxText"].PlainText,
-        "minimax_Voice": items["minimaxVoiceCombo"].CurrentIndex,
-        "minimax_Language": items["minimaxLanguageCombo"].CurrentIndex,
-        "minimax_SubtitleCheckBox":items["minimaxSubtitleCheckBox"].Checked,
-        "minimax_Emotion": items["minimaxEmotionCombo"].CurrentIndex,
-        "minimax_Rate": items["minimaxRateSpinBox"].Value,
-        "minimax_Volume": items["minimaxVolumeSpinBox"].Value,
-        "minimax_Pitch": items["minimaxPitchSpinBox"].Value,
-        "minimax_Format": items["minimaxFormatCombo"].CurrentIndex,
-        "minimax_Break":items["minimaxBreakSpinBox"].Value,
-
-        "OpenAI_API_KEY": openai_items["OpenAIApiKey"].Text,
-        "OpenAI_BASE_URL": openai_items["OpenAIBaseURL"].Text,
-        "OpenAI_Model": items["OpenAIModelCombo"].CurrentIndex,
-        "OpenAI_Voice": items["OpenAIVoiceCombo"].CurrentIndex,
-        "OpenAI_Rate": items["OpenAIRateSpinBox"].Value,
-        "OpenAI_Format": items["OpenAIFormatCombo"].CurrentIndex,
-        "OpenAI_Instruction":items["OpenAIInstructionText"].PlainText,
-        "OpenAI_Preset":items["OpenAIPresetCombo"].CurrentIndex,
-
-        "CN":items["LangCnCheckBox"].Checked,
-        "EN":items["LangEnCheckBox"].Checked,
-        
-    }
-
-    save_settings(settings, settings_file)
-
-
-def on_open_link_button_clicked(ev):
-    if items["LangEnCheckBox"].Checked :
-        webbrowser.open(SCRIPT_KOFI_URL)
-    else :
-        webbrowser.open(SCRIPT_WX_URL)
-win.On.CopyrightButton.Clicked = on_open_link_button_clicked
-
-def on_openai_preview_button_clicked(ev):
-    webbrowser.open(OPENAI_FM)
-win.On.OpenAIPreviewButton.Clicked = on_openai_preview_button_clicked
-
-
-def on_minimax_register_link_button_clicked(ev):
-    if minimax_items["intlCheckBox"].Checked:
-        url= "https://intl.minimaxi.com/login"
-    else:
-        url = "https://platform.minimaxi.com/registration"
-        
-    webbrowser.open(url)
-minimax_config_window.On.minimaxRegisterButton.Clicked = on_minimax_register_link_button_clicked
-
-def on_azure_register_link_button_clicked(ev):
-    url = "https://speech.microsoft.com/portal/voicegallery"
-    webbrowser.open(url)
-azure_config_window.On.AzureRegisterButton.Clicked = on_azure_register_link_button_clicked
-
-def on_open_guide_button_clicked(ev):
-    html_path  = os.path.join(script_path, 'Installation-Usage-Guide.html') 
-    if os.path.exists(html_path):
-        webbrowser.open(f'file://{html_path}')
-    else:
-        print("找不到教程文件:", html_path)
-win.On.openGuideButton.Clicked = on_open_guide_button_clicked
-
-def on_show_azure(ev):
-    azure_config_window.Show()
-win.On.ShowAzure.Clicked = on_show_azure
-
-def on_show_minimax(ev):
-    minimax_config_window.Show()
-win.On.ShowMiniMax.Clicked = on_show_minimax
-
-def on_show_minimax_clone(ev):
-    minimax_clone_items["minimaxNeedNoiseReduction"].Enabled = not minimax_clone_items["minimaxOnlyAddID"].Checked
-    minimax_clone_items["minimaxNeedVolumeNormalization"].Enabled = not minimax_clone_items["minimaxOnlyAddID"].Checked
-    minimax_clone_items["minimaxClonePreviewText"].Enabled = not minimax_clone_items["minimaxOnlyAddID"].Checked
-    minimax_clone_window.Show()
-win.On.ShowMiniMaxClone.Clicked = on_show_minimax_clone
-
-def on_show_openai(ev):
-    openai_config_window.Show()
-win.On.ShowOpenAI.Clicked = on_show_openai
-
-# Azure配置窗口按钮事件
-def on_azure_close(ev):
-    print("Azure API 配置完成")
-    azure_config_window.Hide()
-azure_config_window.On.AzureConfirm.Clicked = on_azure_close
-azure_config_window.On.AzureConfigWin.Close = on_azure_close
-
-# MiniMax配置窗口按钮事件
-def on_minimax_close(ev):
-    print("MiniMax API 配置完成")
-    minimax_config_window.Hide()
-minimax_config_window.On.MiniMaxConfirm.Clicked = on_minimax_close
-minimax_config_window.On.MiniMaxConfigWin.Close = on_minimax_close
-
-class MinimaxVoiceCloner:
-    BASE_URL = "https://api.minimax.chat"
-    BASE_URL_INTL = "https://api.minimaxi.chat"
-    UPLOAD_PATH = "/v1/files/upload"
-    CLONE_PATH = "/v1/voice_clone"
-    def __init__(self,
-                 api_key: str,
-                 group_id: str,
-                 voice_file: str,
-                 items: Dict[str, Any],
-                 intl: bool = False):
-        self.api_key = api_key
-        self.group_id = group_id
-        self.base_url = self.BASE_URL_INTL if intl else self.BASE_URL
-        self.voice_file = voice_file
-        self.items = items
-        self.file_id = None
-    def _make_url(self, path: str) -> str:
-        return f"{self.base_url}{path}?GroupId={self.group_id}"
-
-    def upload_file(self, file_path: str) -> str:
-        """
-        上传音频文件，成功时返回 file_id，不弹窗；失败时根据状态码弹出警告并抛异常。
-        """
-        print("Upload File ...")
-        update_status(STATUS_MESSAGES.file_upload)
-        url = self._make_url(self.UPLOAD_PATH)
-        headers = {'Authorization': f'Bearer {self.api_key}'}
-        data = {'purpose': 'voice_clone'}
-
-        # 1. 发起请求并捕获网络或文件打开异常
-        try:
-            with open(file_path, 'rb') as f:
-                files = {'file': f}
-                resp = requests.post(url, headers=headers,
-                                        data=data, files=files, timeout=300)
-                resp.raise_for_status()
-                resp_data = resp.json()
-        except Exception as e:
-            print(f"文件上传请求失败：{e}")
-            # 通用错误提示
-            show_warning_message(STATUS_MESSAGES.error_1000)
-            raise
-
-        # 2. 解析业务状态码
-        base_resp = resp_data.get("base_resp", {})
-        code = str(base_resp.get("status_code", ""))
-
-        # 3. 只有业务失败时才弹窗并抛异常
-        if code != "0" or "file" not in resp_data:
-            attr = f"error_{code}"
-            status_tuple = getattr(
-                STATUS_MESSAGES,
-                attr,
-                STATUS_MESSAGES.error_1000
-            )
-            show_warning_message(status_tuple)
-            update_status(status_tuple)
-            raise RuntimeError(f"文件上传失败: {resp_data}")
-
-        # 4. 成功时直接返回 file_id，不弹窗
-        self.file_id = resp_data["file"]["file_id"]
-        print(f"上传成功，file_id={self.file_id}")
-        return self.file_id
-
-
-    def submit_clone(self,
-                 voice_id: str,
-                 need_noise_reduction: bool,
-                 need_volume_normalization: bool,
-                 text: str) -> dict:
-        update_status(STATUS_MESSAGES.file_clone)
-        print("Clone File ...")
-        url = self._make_url(self.CLONE_PATH)
-        payload = {
-            "file_id": self.file_id,
-            "voice_id": voice_id,
-            "need_noise_reduction": need_noise_reduction,
-            "need_volume_normalization": need_volume_normalization
-        }
-        if text.strip():
-            payload["text"] = text
-            payload["model"] = "speech-02-hd"
-        headers = {
-            'Authorization': f'Bearer {self.api_key}',
-            'Content-Type': 'application/json'
-        }
-
-        resp = requests.post(url, headers=headers, json=payload)
-        resp.raise_for_status()
-        resp_data = resp.json()
-        base_resp = resp_data.get("base_resp", {})
-        code = str(base_resp.get("status_code", ""))
-        # 仅当 code 非 "0" 时才弹警告
-        if code != "0":
-            attr = f"error_{code}"
-            status_tuple = getattr(
-                STATUS_MESSAGES,
-                attr,
-                STATUS_MESSAGES.error_1000
-            )
-            show_warning_message(status_tuple)
-            update_status(status_tuple)
-            raise RuntimeError(f"合成失败，状态码 {resp_data}")
-
-        # 成功时不弹窗，直接返回
-        return resp_data
-
-
-    def download_demo(self,
-                      data: dict,
-                      save_dir: str,
-                      voice_id: str) -> Optional[str]:
-        print("Download Preview Audio ...")
-        update_status(STATUS_MESSAGES.download_preclone)
-        demo_url = data.get("demo_audio")
-        if not demo_url:
-            return None
-        os.makedirs(save_dir, exist_ok=True)
-        local_path = os.path.join(save_dir, f"preview_{voice_id}.mp3")
-        resp = requests.get(demo_url, stream=True, timeout=30)
-        resp.raise_for_status()
-        with open(local_path, 'wb') as f:
-            for chunk in resp.iter_content(8192):
-                f.write(chunk)
-        return local_path
-
-    
 def load_clone_data(voice_file: str) -> Dict[str, Any]:
     """
     读取 JSON 文件，返回包含 key 'minimax_clone_voices' 的字典
@@ -3244,10 +2698,10 @@ def refresh_voice_combo(
     刷新下拉框：只添加 language 与当前语言一致的条目
     """
     combo = items["minimaxVoiceCombo"]
-    combo.Clear()  # 清空所有选项 _README_WORKFLOW_20.txt](file-service://file-27aT4jFAer9mu7jVoLKdot)
+    combo.Clear()
 
     current_lang = items["minimaxLanguageCombo"].CurrentText.strip()
-    # 先添加符合当前语言的克隆列表
+    # 先添加符合当前语言的��隆列表
     for v in clone_list:
         if v.get("language", "").strip() == current_lang:
             combo.AddItem(v["voice_name"])
@@ -3322,7 +2776,7 @@ def delete_clone_voice(
     return filtered
 
 def on_delete_minimax_clone_voice(ev):
-    global minimax_clone_voices  # 声明我们要更新的全局变量
+    global minimax_clone_voices
     voice_name = items["minimaxVoiceCombo"].CurrentText.strip()
     minimax_clone_voices = delete_clone_voice(
             voice_file=voice_file,
@@ -3330,97 +2784,108 @@ def on_delete_minimax_clone_voice(ev):
             items=items,
             minimax_clone_voices=minimax_clone_voices,
             minimax_voices=minimax_voices,
-            
         )
 win.On.minimaxDeleteVoice.Clicked = on_delete_minimax_clone_voice
 
 def on_minimax_clone_confirm(ev):
-    # 1. 参数检查
-    if not (minimax_items["minimaxGroupID"].Text and minimax_items["minimaxApiKey"].Text):
-        show_warning_message(STATUS_MESSAGES.enter_api_key)
+    # 1. Parameter validation
+    if not all([minimax_items["minimaxGroupID"].Text, minimax_items["minimaxApiKey"].Text, items["Path"].Text]):
+        show_warning_message(STATUS_MESSAGES.enter_api_key if not items["Path"].Text else STATUS_MESSAGES.select_save_path)
         return
-    if items["Path"].Text == '':
-        show_warning_message(STATUS_MESSAGES.select_save_path)
-        return
-    global minimax_clone_voices  # 声明我们要更新的全局变量
-    # 2. 读取通用参数
-    group_id = minimax_items["minimaxGroupID"].Text
-    api_key  = minimax_items["minimaxApiKey"].Text
-    intl     = minimax_items["intlCheckBox"].Checked
-    voice_name = minimax_clone_items["minimaxCloneVoiceName"].Text.strip()
-    voice_id   = minimax_clone_items["minimaxCloneVoiceID"].Text.strip()
-    need_nr    = minimax_clone_items["minimaxNeedNoiseReduction"].Checked
-    need_vn    = minimax_clone_items["minimaxNeedVolumeNormalization"].Checked
-    preview_text = minimax_clone_items["minimaxClonePreviewText"].PlainText.strip()
     
+    global minimax_clone_voices
+    voice_name = minimax_clone_items["minimaxCloneVoiceName"].Text.strip()
+    voice_id = minimax_clone_items["minimaxCloneVoiceID"].Text.strip()
     if not voice_name or not voice_id:
         show_warning_message(STATUS_MESSAGES.clone_id_error)
         return
-    # 3. 初始化或复用封装好的类
-    cloner = MinimaxVoiceCloner(api_key, group_id,
-                                voice_file,
-                                items, intl)
 
-    # 4. 只添加 ID
+    # 2. Initialize Provider
+    try:
+        provider = MiniMaxProvider(
+            api_key=minimax_items["minimaxApiKey"].Text,
+            group_id=minimax_items["minimaxGroupID"].Text,
+            is_intl=minimax_items["intlCheckBox"].Checked
+        )
+    except ValueError as e:
+        print(e)
+        return
+
+    # 3. Handle "Add ID Only" mode
     if minimax_clone_items["minimaxOnlyAddID"].Checked:
         minimax_clone_voices = add_clone_voice(
-            voice_file=voice_file,
-            voice_name=voice_name,
-            voice_id=voice_id,
-            items=items,
-            minimax_clone_voices=minimax_clone_voices,
-            minimax_voices=minimax_voices,
-            
+            voice_file=voice_file, voice_name=voice_name, voice_id=voice_id, items=items,
+            minimax_clone_voices=minimax_clone_voices, minimax_voices=minimax_voices
         )
         return
 
-    # 5. 先 ensure file_id
-    if minimax_clone_items["minimaxCloneFileID"].Text == "":
-        file_path = render_audio_by_marker(items["Path"].Text)
-        if file_path is None:
+    # 4. Full clone process: Get File ID -> Submit -> Download
+    file_id_text = minimax_clone_items["minimaxCloneFileID"].Text.strip()
+    if not file_id_text:
+        update_status(STATUS_MESSAGES.file_upload)
+        audio_path = render_audio_by_marker(items["Path"].Text)
+        if not audio_path:
+            update_status(STATUS_MESSAGES.render_audio_failed)
             return
-        print(f"file_path:{file_path}")
-        if os.path.exists(file_path):
-            file_size = os.path.getsize(file_path)
-            if file_size > 20 * 1024 * 1024:
-                show_warning_message(STATUS_MESSAGES.file_size)
-                return
         
-        cloner.upload_file(file_path)
-        print(f"file_id:{cloner.file_id}")
-        minimax_clone_items["minimaxCloneFileID"].Text = str(cloner.file_id)
+        if os.path.exists(audio_path) and os.path.getsize(audio_path) > 20 * 1024 * 1024:
+            show_warning_message(STATUS_MESSAGES.file_size)
+            update_status(STATUS_MESSAGES.synthesis_failed)
+            return
+
+        upload_result = provider.upload_file_for_clone(audio_path)
+        if upload_result["error_message"]:
+            attr = f"error_{upload_result["error_code"]}"
+            status_tuple = getattr(
+                    STATUS_MESSAGES,
+                    attr,
+                    STATUS_MESSAGES.error_1000
+                )
+            show_warning_message(status_tuple)
+            update_status(status_tuple)
+            return
+        
+        file_id = upload_result["file_id"]
+        minimax_clone_items["minimaxCloneFileID"].Text = str(file_id)
     else:
-        cloner.file_id = int(minimax_clone_items["minimaxCloneFileID"].Text)
+        file_id = int(file_id_text)
 
-    # 6. 提交克隆并下载 demo
-   
-    resp = cloner.submit_clone(voice_id, need_nr, need_vn, preview_text)
-    print(f"response:{resp}")
+    # 5. Submit clone job
+    update_status(STATUS_MESSAGES.file_clone)
+    clone_result = provider.submit_clone_job(
+        file_id=file_id, voice_id=voice_id,
+        need_nr=minimax_clone_items["minimaxNeedNoiseReduction"].Checked,
+        need_vn=minimax_clone_items["minimaxNeedVolumeNormalization"].Checked,
+        text=minimax_clone_items["minimaxClonePreviewText"].PlainText.strip()
+    )
 
-    # 7. 如果成功，再把声音写入列表
-    if resp.get("base_resp", {}).get("status_code") == 0:
-        save_dir = items["Path"].Text
-        demo_path = cloner.download_demo(resp, save_dir, voice_id)
-        add_to_media_pool_and_timeline(
-            current_timeline.GetStartFrame(),
-            current_timeline.GetEndFrame(),
-            demo_path
-        )   
-        minimax_clone_voices = add_clone_voice(
-            voice_file=voice_file,
-            voice_name=voice_name,
-            voice_id=voice_id,
-            items=items,
-            minimax_clone_voices=minimax_clone_voices,
-            minimax_voices=minimax_voices,
-            
-        )
-        show_warning_message(STATUS_MESSAGES.clone_success)
-    else:
-        msg = resp.get("base_resp", {}).get("status_msg")
-        minimax_clone_items["minimaxCloneStatus"].Text = f"ERROR:{msg}"
+    if clone_result["error_message"]:
+        attr = f"error_{clone_result["error_code"]}"
+        status_tuple = getattr(
+                STATUS_MESSAGES,
+                attr,
+                STATUS_MESSAGES.error_1000
+            )
+        show_warning_message(status_tuple)
+        update_status(status_tuple)
+        #minimax_clone_items["minimaxCloneStatus"].Text = f"ERROR: {clone_result['error_message']}"
+        return
 
+    # 6. Download demo and update lists
+    if clone_result["demo_url"]:
+        update_status(STATUS_MESSAGES.download_preclone)
+        demo_content = provider.download_media(clone_result["demo_url"])
+        if demo_content:
+            demo_path = os.path.join(items["Path"].Text, f"preview_{voice_id}.mp3")
+            with open(demo_path, 'wb') as f:
+                f.write(demo_content)
+            add_to_media_pool_and_timeline(current_timeline.GetStartFrame(), current_timeline.GetEndFrame(), demo_path)
 
+    minimax_clone_voices = add_clone_voice(
+        voice_file=voice_file, voice_name=voice_name, voice_id=voice_id, items=items,
+        minimax_clone_voices=minimax_clone_voices, minimax_voices=minimax_voices
+    )
+    show_warning_message(STATUS_MESSAGES.clone_success)
 minimax_clone_window.On.MiniMaxCloneConfirm.Clicked = on_minimax_clone_confirm
 
 def on_minimax_clone_close(ev):
@@ -3429,12 +2894,516 @@ def on_minimax_clone_close(ev):
 minimax_clone_window.On.MiniMaxCloneWin.Close = on_minimax_clone_close
 minimax_clone_window.On.MiniMaxCloneCancel.Clicked = on_minimax_clone_close
 
-# OpenAI配置窗口按钮事件
+def on_minimax_preview_button_click(ev):
+    if minimax_items["intlCheckBox"].Checked:
+        webbrowser.open(MINIMAX_PREW_URL)
+    else:
+        webbrowser.open(MINIMAXI_PREW_URL)
+    """
+        try:
+            # 请确保文件路径正确
+            pcm_file = os.path.join(config_dir, "minimax_voice_data.pcm")  # 拼接完整路径
+            json_file = os.path.join(config_dir, "minimax_voice_data.json")
+            # 检查文件是否存在
+            if not os.path.exists(pcm_file):
+                show_warning_message(STATUS_MESSAGES.download_pcm)
+                return
+            if not os.path.exists(json_file):
+                show_warning_message(STATUS_MESSAGES.download_json)
+                return
+            voice_name = items["minimaxVoiceCombo"].CurrentText  # 目标音色
+
+            voice_id = next(
+                (v["voice_name"] for v in minimax_voices 
+                if voice_name == v["voice_name"] or voice_name == v["voice_id"]),
+                ""
+            )
+
+            # 播放音频
+            play_audio_segment(pcm_file, json_file, voice_id)
+
+        except Exception as e:
+            print(f"播放失败: {e}")
+    """      
+win.On.minimaxPreviewButton.Clicked = on_minimax_preview_button_click
+
+def process_minimax_request(text_func, timeline_func):
+    # 1. Validate inputs
+    save_path = items["Path"].Text
+    api_key = minimax_items["minimaxApiKey"].Text
+    group_id = minimax_items["minimaxGroupID"].Text
+
+    if not all([save_path, api_key, group_id]):
+        show_warning_message(STATUS_MESSAGES.select_save_path if not save_path else STATUS_MESSAGES.enter_api_key)
+        update_status(STATUS_MESSAGES.synthesis_failed)
+        return
+
+    update_status(STATUS_MESSAGES.synthesizing)
+
+    # 2. Initialize Provider
+    try:
+        provider = MiniMaxProvider(
+            api_key=api_key,
+            group_id=group_id,
+            is_intl=minimax_items["intlCheckBox"].Checked
+        )
+    except ValueError as e:
+        print(e)
+        update_status(STATUS_MESSAGES.synthesis_failed)
+        return
+
+    # 3. Get voice ID and other params
+    voice_name = items["minimaxVoiceCombo"].CurrentText
+    all_voices = minimax_voices + minimax_clone_voices
+    voice_id = next((v["voice_id"] for v in all_voices if v["voice_name"] == voice_name), None)
+    if not voice_id:
+        show_warning_message(STATUS_MESSAGES.synthesis_failed) # Or a more specific "voice not found" message
+        print(f"Could not find voice_id for {voice_name}")
+        return
+
+    emotion_name = items["minimaxEmotionCombo"].CurrentText
+    emotion_value = next((en for cn, en in emotions if emotion_name in (cn, en)), "")
+
+    # 4. Call synthesis logic
+    text = text_func()
+    result = provider.synthesize(
+        text=text,
+        model=items["minimaxModelCombo"].CurrentText,
+        voice_id=voice_id,
+        speed=items["minimaxRateSpinBox"].Value,
+        vol=items["minimaxVolumeSpinBox"].Value,
+        pitch=items["minimaxPitchSpinBox"].Value,
+        file_format=items["minimaxFormatCombo"].CurrentText,
+        subtitle_enable=items["minimaxSubtitleCheckBox"].Checked,
+        emotion=emotion_value
+    )
+
+    # 5. Handle result
+    if result["error_message"]:
+        attr = f"error_{result["error_code"]}"
+        status_tuple = getattr(
+                STATUS_MESSAGES,
+                attr,
+                STATUS_MESSAGES.error_1000
+            )
+        show_warning_message(status_tuple)
+        update_status(status_tuple)
+        return
+
+    # Save audio
+    filename = generate_filename(save_path, text, f".{items['minimaxFormatCombo'].CurrentText}")
+    try:
+        with open(filename, "wb") as f:
+            f.write(result["audio_content"])
+        start_frame, end_frame = timeline_func()
+        add_to_media_pool_and_timeline(start_frame, end_frame, filename)
+    except IOError as e:
+        print(f"Failed to write audio file: {e}")
+        update_status(STATUS_MESSAGES.audio_save_failed)
+        return
+
+    # Handle subtitles
+    if result["subtitle_url"]:
+        subtitle_content = provider.download_media(result["subtitle_url"])
+        if subtitle_content:
+            subtitle_json_path = os.path.splitext(filename)[0] + ".json"
+            srt_path = os.path.splitext(filename)[0] + ".srt"
+            try:
+                with open(subtitle_json_path, 'wb') as f:
+                    f.write(subtitle_content)
+                
+                with open(subtitle_json_path, 'r', encoding='utf-8') as f:
+                    json_data = json.load(f)
+                
+                json_to_srt(json_data, srt_path)
+                import_srt_to_timeline(srt_path)
+                os.remove(subtitle_json_path) # Clean up temp json
+            except (IOError, json.JSONDecodeError) as e:
+                print(f"Failed to process subtitle file: {e}")
+    
+    update_status(STATUS_MESSAGES.loaded_to_timeline)
+
+def on_minimax_fromsub_button_clicked(ev):
+    project_manager = resolve.GetProjectManager()
+    current_project = project_manager.GetCurrentProject()
+    current_timeline = current_project.GetCurrentTimeline()
+    if not current_timeline:
+        show_warning_message(STATUS_MESSAGES.create_timeline)
+        return
+    if items["Path"].Text == '':
+        show_warning_message(STATUS_MESSAGES.select_save_path)
+        return
+    items["minimaxSubtitleCheckBox"].Checked = False
+    process_minimax_request(
+        text_func=lambda: get_current_subtitle(current_timeline)[0],
+        timeline_func=lambda: get_current_subtitle(current_timeline)[1:]
+    )
+win.On.minimaxFromSubButton.Clicked = on_minimax_fromsub_button_clicked
+
+def on_minimax_fromtxt_button_clicked(ev):
+    project_manager = resolve.GetProjectManager()
+    current_project = project_manager.GetCurrentProject()
+    current_timeline = current_project.GetCurrentTimeline()
+    if not current_timeline:
+        show_warning_message(STATUS_MESSAGES.create_timeline)
+        return
+    if items["Path"].Text == '':
+        show_warning_message(STATUS_MESSAGES.select_save_path)
+        return
+    process_minimax_request(
+        text_func=lambda: items["minimaxText"].PlainText,
+        timeline_func=lambda: (
+            # 动态获取当前帧和时间线结束帧
+            timecode_to_frames(
+                current_timeline.GetCurrentTimecode(),
+                float(current_timeline.GetSetting("timelineFrameRate"))
+            ),
+            current_timeline.GetEndFrame()
+        )
+    )
+win.On.minimaxFromTxtButton.Clicked = on_minimax_fromtxt_button_clicked
+
+def on_minimax_break_button_clicked(ev):
+    breaktime =  items["minimaxBreakSpinBox"].Value/1000
+    # 插入<break>标志
+    items["minimaxText"].InsertPlainText(f'<#{breaktime}#>')
+win.On.minimaxBreakButton.Clicked = on_minimax_break_button_clicked
+
+def on_minimax_reset_button_clicked(ev):
+    """
+    重置所有输入控件为默认设置。
+    """
+    items["minimaxModelCombo"].CurrentIndex = default_settings["minimax_Model"]
+    items["minimaxVoiceCombo"].CurrentIndex = default_settings["minimax_Voice"]
+    items["minimaxLanguageCombo"].CurrentIndex = default_settings["minimax_Language"]
+    items["minimaxEmotionCombo"].CurrentIndex = default_settings["minimax_Emotion"]
+    items["minimaxRateSpinBox"].Value = default_settings["minimax_Rate"]
+    items["minimaxVolumeSpinBox"].Value = default_settings["minimax_Volume"]
+    items["minimaxPitchSpinBox"].Value = default_settings["minimax_Pitch"]
+    items["minimaxFormatCombo"].CurrentIndex=default_settings["minimax_Format"]
+    items["minimaxBreakSpinBox"].Value = default_settings["minimax_Break"]
+    items["minimaxSubtitleCheckBox"].Checked = default_settings["minimax_SubtitleCheckBox"]
+win.On.minimaxResetButton.Clicked = on_minimax_reset_button_clicked
+
+def on_minimax_register_link_button_clicked(ev):
+    if minimax_items["intlCheckBox"].Checked:
+        url= "https://intl.minimaxi.com/login"
+    else:
+        url = "https://platform.minimaxi.com/registration"
+        
+    webbrowser.open(url)
+minimax_config_window.On.minimaxRegisterButton.Clicked = on_minimax_register_link_button_clicked
+
+def on_minimax_close(ev):
+    print("MiniMax API 配置完成")
+    minimax_config_window.Hide()
+minimax_config_window.On.MiniMaxConfirm.Clicked = on_minimax_close
+minimax_config_window.On.MiniMaxConfigWin.Close = on_minimax_close
+
+#============== OPENAI ====================#
+def process_openai_request(text_func, timeline_func):
+    # 1. Input validation
+    save_path = items["Path"].Text
+    api_key = openai_items["OpenAIApiKey"].Text
+    if not save_path or not api_key:
+        show_warning_message(STATUS_MESSAGES.select_save_path if not save_path else STATUS_MESSAGES.enter_api_key)
+        update_status(STATUS_MESSAGES.synthesis_failed)
+        return
+
+    update_status(STATUS_MESSAGES.synthesizing)
+
+    # 2. Initialize Provider
+    try:
+        provider = OpenAIProvider(api_key, openai_items["OpenAIBaseURL"].Text)
+    except ValueError as e:
+        print(e)
+        update_status(STATUS_MESSAGES.synthesis_failed)
+        return
+
+    # 3. Call synthesis logic
+    text = text_func()
+    audio_content = provider.synthesize(
+        text=text,
+        model=items["OpenAIModelCombo"].CurrentText,
+        voice=items["OpenAIVoiceCombo"].CurrentText,
+        speed=items["OpenAIRateSpinBox"].Value,
+        file_format=items["OpenAIFormatCombo"].CurrentText,
+        instructions=items["OpenAIInstructionText"].PlainText.strip()
+    )
+
+    # 4. Handle the result
+    if audio_content:
+        filename = generate_filename(save_path, text, f".{items['OpenAIFormatCombo'].CurrentText}")
+        try:
+            with open(filename, "wb") as f:
+                f.write(audio_content)
+            
+            start_frame, end_frame = timeline_func()
+            add_to_media_pool_and_timeline(start_frame, end_frame, filename)
+            update_status(STATUS_MESSAGES.loaded_to_timeline)
+        except IOError as e:
+            print(f"Failed to write audio file: {e}")
+            update_status(STATUS_MESSAGES.audio_save_failed)
+    else:
+        update_status(STATUS_MESSAGES.synthesis_failed)
+
+def on_openai_fromsub_button_clicked(ev):
+    project_manager = resolve.GetProjectManager()
+    current_project = project_manager.GetCurrentProject()
+    current_timeline = current_project.GetCurrentTimeline()
+    if not current_timeline:
+        show_warning_message(STATUS_MESSAGES.create_timeline)
+        return False
+
+    process_openai_request(
+        text_func=lambda: get_current_subtitle(current_timeline)[0],
+        timeline_func=lambda: get_current_subtitle(current_timeline)[1:]
+        )
+win.On.OpenAIFromSubButton.Clicked = on_openai_fromsub_button_clicked
+
+def on_openai_fromtxt_button_clicked(ev):
+    project_manager = resolve.GetProjectManager()
+    current_project = project_manager.GetCurrentProject()
+    current_timeline = current_project.GetCurrentTimeline()
+    if not current_timeline:
+        show_warning_message(STATUS_MESSAGES.create_timeline)
+        return False
+
+    process_openai_request(
+        text_func=lambda: items["OpenAIText"].PlainText,
+        timeline_func=lambda: (
+            # 动态获取当前帧和时间线结束帧
+            timecode_to_frames(
+                current_timeline.GetCurrentTimecode(),
+                float(current_timeline.GetSetting("timelineFrameRate"))
+            ),
+            current_timeline.GetEndFrame()
+        )
+    ) 
+win.On.OpenAIFromTxtButton.Clicked = on_openai_fromtxt_button_clicked
+
+
+def on_openai_reset_button_clicked(ev):
+    """
+    重置所有输入控件为默认设置。
+    """
+    items["OpenAIModelCombo"].CurrentIndex = default_settings["OpenAI_Model"]
+    items["OpenAIVoiceCombo"].CurrentIndex = default_settings["OpenAI_Voice"]
+    items["OpenAIRateSpinBox"].Value = default_settings["minimax_Rate"]
+    items["OpenAIFormatCombo"].CurrentIndex = default_settings["OpenAI_Format"]
+    items["OpenAIInstructionText"].Text = default_settings["OpenAI_Instruction"]
+    items["OpenAIPresetCombo"].CurrentIndex = default_settings["OpenAI_Preset"]
+win.On.OpenAIResetButton.Clicked = on_openai_reset_button_clicked
+
+def on_openai_preview_button_clicked(ev):
+    webbrowser.open(OPENAI_FM)
+win.On.OpenAIPreviewButton.Clicked = on_openai_preview_button_clicked
+
 def on_openai_close(ev):
     print("OpenAI API 配置完成")
     openai_config_window.Hide()
 openai_config_window.On.OpenAIConfirm.Clicked = on_openai_close
 openai_config_window.On.OpenAIConfigWin.Close = on_openai_close
+
+def on_browse_button_clicked(ev):
+    current_path = items["Path"].Text
+    selected_path = fusion.RequestDir(current_path)
+    if selected_path:
+        # 创建以项目名称命名的子目录
+        project_subdir = os.path.join(selected_path, f"{current_project.GetName()}_TTS")
+        try:
+            os.makedirs(project_subdir, exist_ok=True)
+            items["Path"].Text = str(project_subdir)
+            print(f"Directory created: {project_subdir}")
+        except Exception as e:
+            print(f"Failed to create directory: {e}")
+    else:
+        print("No directory selected or the request failed.")
+win.On.Browse.Clicked = on_browse_button_clicked
+
+def close_and_save(settings_file):
+    settings = {
+        "API_KEY": azure_items["ApiKey"].Text,
+        "REGION": azure_items["Region"].Text,
+        "LANGUAGE": items["LanguageCombo"].CurrentIndex,
+        "TYPE": items["NameTypeCombo"].CurrentIndex,
+        "NAME": items["NameCombo"].CurrentIndex,
+        "RATE": items["RateSpinBox"].Value,
+        "PITCH": items["PitchSpinBox"].Value,
+        "VOLUME": items["VolumeSpinBox"].Value,
+        "STYLEDEGREE": items["StyleDegreeSpinBox"].Value,
+        "OUTPUT_FORMATS": items["OutputFormatCombo"].CurrentIndex,
+        "UNUSE_API":azure_items["UnuseAPICheckBox"].Checked,
+
+        "minimax_API_KEY": minimax_items["minimaxApiKey"].Text,
+        "minimax_GROUP_ID": minimax_items["minimaxGroupID"].Text,
+        "minimax_intlCheckBox":minimax_items["intlCheckBox"].Checked,
+        "Path": items["Path"].Text,
+        "minimax_Model": items["minimaxModelCombo"].CurrentIndex,
+        #"Text": items["minimaxText"].PlainText,
+        "minimax_Voice": items["minimaxVoiceCombo"].CurrentIndex,
+        "minimax_Language": items["minimaxLanguageCombo"].CurrentIndex,
+        "minimax_SubtitleCheckBox":items["minimaxSubtitleCheckBox"].Checked,
+        "minimax_Emotion": items["minimaxEmotionCombo"].CurrentIndex,
+        "minimax_Rate": items["minimaxRateSpinBox"].Value,
+        "minimax_Volume": items["minimaxVolumeSpinBox"].Value,
+        "minimax_Pitch": items["minimaxPitchSpinBox"].Value,
+        "minimax_Format": items["minimaxFormatCombo"].CurrentIndex,
+        "minimax_Break":items["minimaxBreakSpinBox"].Value,
+
+        "OpenAI_API_KEY": openai_items["OpenAIApiKey"].Text,
+        "OpenAI_BASE_URL": openai_items["OpenAIBaseURL"].Text,
+        "OpenAI_Model": items["OpenAIModelCombo"].CurrentIndex,
+        "OpenAI_Voice": items["OpenAIVoiceCombo"].CurrentIndex,
+        "OpenAI_Rate": items["OpenAIRateSpinBox"].Value,
+        "OpenAI_Format": items["OpenAIFormatCombo"].CurrentIndex,
+        "OpenAI_Instruction":items["OpenAIInstructionText"].PlainText,
+        "OpenAI_Preset":items["OpenAIPresetCombo"].CurrentIndex,
+
+        "CN":items["LangCnCheckBox"].Checked,
+        "EN":items["LangEnCheckBox"].Checked,
+        
+    }
+
+    save_settings(settings, settings_file)
+
+def on_open_link_button_clicked(ev):
+    if items["LangEnCheckBox"].Checked :
+        webbrowser.open(SCRIPT_KOFI_URL)
+    else :
+        webbrowser.open(SCRIPT_WX_URL)
+win.On.CopyrightButton.Clicked = on_open_link_button_clicked
+
+def on_azure_register_link_button_clicked(ev):
+    url = "https://speech.microsoft.com/portal/voicegallery"
+    webbrowser.open(url)
+azure_config_window.On.AzureRegisterButton.Clicked = on_azure_register_link_button_clicked
+
+def on_open_guide_button_clicked(ev):
+    html_path  = os.path.join(script_path, 'Installation-Usage-Guide.html') 
+    if os.path.exists(html_path):
+        webbrowser.open(f'file://{html_path}')
+    else:
+        print("找不到教程文件:", html_path)
+win.On.openGuideButton.Clicked = on_open_guide_button_clicked
+
+def on_show_azure(ev):
+    azure_config_window.Show()
+win.On.ShowAzure.Clicked = on_show_azure
+
+def on_show_minimax(ev):
+    minimax_config_window.Show()
+win.On.ShowMiniMax.Clicked = on_show_minimax
+
+def on_show_minimax_clone(ev):
+    minimax_clone_items["minimaxNeedNoiseReduction"].Enabled = not minimax_clone_items["minimaxOnlyAddID"].Checked
+    minimax_clone_items["minimaxNeedVolumeNormalization"].Enabled = not minimax_clone_items["minimaxOnlyAddID"].Checked
+    minimax_clone_items["minimaxClonePreviewText"].Enabled = not minimax_clone_items["minimaxOnlyAddID"].Checked
+    minimax_clone_window.Show()
+win.On.ShowMiniMaxClone.Clicked = on_show_minimax_clone
+
+def on_show_openai(ev):
+    openai_config_window.Show()
+win.On.ShowOpenAI.Clicked = on_show_openai
+
+# Azure配置窗口按钮事件
+def on_azure_close(ev):
+    print("Azure API 配置完成")
+    azure_config_window.Hide()
+azure_config_window.On.AzureConfirm.Clicked = on_azure_close
+azure_config_window.On.AzureConfigWin.Close = on_azure_close
+
+def on_break_button_clicked(ev):
+    breaktime =  items["BreakSpinBox"].Value
+    # 插入<break>标志
+    items["AzureTxt"].InsertPlainText(f'<break time="{breaktime}ms" />')
+win.On.BreakButton.Clicked = on_break_button_clicked
+
+def on_alphabet_button_clicked(ev):
+    items["AzureTxt"].Copy()
+    from pypinyin import pinyin, Style
+
+    def convert_to_pinyin_with_tone(text):
+        pinyin_list = pinyin(text, style=Style.TONE3, heteronym=False)
+        pinyin_with_tone = []
+
+        for word in pinyin_list:
+            if word[0][-1].isdigit():  # 如果最后一个字符是数字（声调）
+                pinyin_with_tone.append(f"{word[0][:-1]} {word[0][-1]}")
+            else:  # 否则，表示是轻声
+                pinyin_with_tone.append(f"{word[0]} 5")
+        
+        return ' '.join(pinyin_with_tone)
+
+    alphabet = dispatcher.AddWindow(
+        {
+            "ID": 'Alphabet',
+            "WindowTitle": '多音字',
+            "Geometry": [750, 400, 500, 150],
+            "Spacing": 10,
+        },
+        [   
+            ui.VGroup(
+                [
+                    ui.HGroup(
+                        {"Weight": 1},
+                        [
+                            ui.LineEdit({"ID": 'AlphaTxt', "Text": ""}),
+                        ]
+                    ),
+                    ui.HGroup(
+                        {"Weight": 0},
+                        [
+                            ui.Label({"ID": 'msgLabel', "Text": """例如，'li 4 zi 5' 表示 '例子'。数字代表拼音声调。'5' 代表轻声。\n若要控制儿化音，请在拼音的声调前插入 "r"。例如，"hou r 2 shan 1" 代表“猴儿山”。"""}),
+                        ]
+                    ),
+                    ui.HGroup(
+                        {
+                            "Weight": 0,
+                        },
+                        [
+                            ui.Button({"ID": 'OkButton', "Text": 'OK'}),
+                        ]
+                    ),
+                ]
+            ),
+        ]
+    )
+
+    ahb = alphabet.GetItems()
+    ahb["AlphaTxt"].Text =  ahb["AlphaTxt"].Paste()
+    original_text = ahb["AlphaTxt"].Text
+    convert_test= convert_to_pinyin_with_tone(re.sub(r'[^\u4e00-\u9fa5]', '', original_text))
+    ahb["AlphaTxt"].Text = convert_test
+
+    def on_ok_button_clicked(ev):
+        replace_text = ahb["AlphaTxt"].Text
+        replace_text = '' if replace_text == '' else (original_text if replace_text == convert_test else f"<phoneme alphabet=\"sapi\" ph=\"{ahb['AlphaTxt'].Text}\">{original_text}</phoneme>")
+        items["AzureTxt"].InsertPlainText(replace_text)
+        dispatcher.ExitLoop()
+        
+    alphabet.On.OkButton.Clicked = on_ok_button_clicked
+    def on_close(ev):
+        dispatcher.ExitLoop()
+    alphabet.On.Alphabet.Close = on_close
+    alphabet.Show()
+    dispatcher.RunLoop()
+    alphabet.Hide()
+win.On.AlphabetButton.Clicked = on_alphabet_button_clicked
+
+def on_reset_button_clicked(ev):
+
+    items["LanguageCombo"].CurrentIndex = default_settings["LANGUAGE"]
+    items["NameTypeCombo"].CurrentIndex = default_settings["TYPE"]
+    items["NameCombo"].CurrentIndex = default_settings["NAME"]
+    items["RateSpinBox"].Value = default_settings["RATE"]
+    items["BreakSpinBox"].Value = default_settings["BREAKTIME"]
+    items["PitchSpinBox"].Value = default_settings["PITCH"]
+    items["VolumeSpinBox"].Value = default_settings["VOLUME"]
+    items["StyleCombo"].CurrentIndex = default_settings["STYLE"]
+    items["StyleDegreeSpinBox"].Value = default_settings["STYLEDEGREE"]
+    items["OutputFormatCombo"].CurrentIndex = default_settings["OUTPUT_FORMATS"]
+win.On.ResetButton.Clicked = on_reset_button_clicked
 
 def on_aitranslator_button(ev):
     if items["LangEnCheckBox"].Checked :
@@ -3447,8 +3416,6 @@ def on_close(ev):
     close_and_save(settings_file)
     dispatcher.ExitLoop()
 win.On.MainWin.Close = on_close
-
-
 
 win.Show()
 dispatcher.RunLoop()
