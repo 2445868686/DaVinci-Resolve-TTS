@@ -353,6 +353,99 @@ class OpenAIProvider:
                     print(f"Error details: {e.response.text}")
             return None
 
+class AzureTTSProvider:
+    """
+    Handles all interactions with the Azure and EdgeTTS services.
+    """
+    def __init__(self, api_key, region, use_api):
+        self.api_key = api_key
+        self.region = region
+        self.use_api = use_api
+        self.speech_config = None
+        if self.use_api:
+            if not self.api_key or not self.region:
+                raise ValueError("API key and region are required for Azure API.")
+            self.speech_config = speechsdk.SpeechConfig(subscription=self.api_key, region=self.region)
+
+    def synthesize(self, text, voice_name, rate, pitch, volume, style, style_degree, multilingual, audio_format, filename, start_frame, end_frame):
+        """
+        Synthesizes speech using either Azure API or EdgeTTS.
+        """
+        if self.use_api:
+            return self._synthesize_azure(text, voice_name, rate, pitch, volume, style, style_degree, multilingual, audio_format, filename, start_frame, end_frame)
+        else:
+            return self._synthesize_edgetts(text, voice_name, rate, pitch, volume, filename, start_frame, end_frame)
+
+    def _synthesize_azure(self, text, voice_name, rate, pitch, volume, style, style_degree, multilingual, audio_format, filename, start_frame, end_frame):
+        update_status(STATUS_MESSAGES.synthesizing)
+        self.speech_config.set_speech_synthesis_output_format(audio_format)
+        ssml = create_ssml(lang=lang, voice_name=voice_name, text=text, rate=rate, volume=volume, style=style, styledegree=style_degree, multilingual=multilingual, pitch=pitch)
+        print(ssml)
+        
+        audio_output_config = speechsdk.audio.AudioOutputConfig(filename=filename)
+        speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=self.speech_config, audio_config=audio_output_config)
+        result = speech_synthesizer.speak_ssml_async(ssml).get()
+        
+        if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
+            time.sleep(1)
+            add_to_media_pool_and_timeline(start_frame, end_frame, filename)
+            return True, None
+        elif result.reason == speechsdk.ResultReason.Canceled:
+            cancellation_details = result.cancellation_details
+            error_message = f"Speech synthesis canceled: {cancellation_details.reason}"
+            if cancellation_details.reason == speechsdk.CancellationReason.Error:
+                error_message += f" - Error details: {cancellation_details.error_details}"
+            print(error_message)
+            update_status(STATUS_MESSAGES.synthesis_failed)
+            return False, error_message
+        return False, "Unknown Azure synthesis error."
+
+    def _synthesize_edgetts(self, text, voice_name, rate, pitch, volume, filename, start_frame, end_frame):
+        update_status(STATUS_MESSAGES.synthesizing)
+        prosody_rate = f"+{int((rate-1)*100)}%" if rate > 1 else f"-{int((1-rate)*100)}%"
+        prosody_pitch = f"+{int((pitch-1)*100)}Hz" if pitch > 1 else f"-{int((1-pitch)*100)}Hz"
+        prosody_volume = f"+{int((volume-1)*100)}%" if volume > 1 else f"-{int((1-volume)*100)}%"
+        
+        print(f"Voice Name: {voice_name}, Rate: {prosody_rate}, Pitch: {prosody_pitch}, Volume: {prosody_volume}")
+        
+        try:
+            communicate = edge_tts.Communicate(text, voice_name, rate=prosody_rate, volume=prosody_volume, pitch=prosody_pitch)
+            communicate.save_sync(filename)
+            time.sleep(1)
+            add_to_media_pool_and_timeline(start_frame, end_frame, filename)
+            update_status(STATUS_MESSAGES.loaded_to_timeline)
+            return True, None
+        except Exception as e:
+            error_message = f"EdgeTTS synthesis failed: {e}"
+            print(error_message)
+            update_status(STATUS_MESSAGES.synthesis_failed)
+            return False, error_message
+
+    def preview(self, text, voice_name, rate, pitch, volume, style, style_degree, multilingual, audio_format):
+        if not self.use_api:
+            show_warning_message(STATUS_MESSAGES.prev_txt) # Or some other appropriate message for EdgeTTS preview
+            return False, "Preview is not supported for EdgeTTS in this implementation."
+
+        update_status(STATUS_MESSAGES.playing)
+        self.speech_config.set_speech_synthesis_output_format(audio_format)
+        ssml = create_ssml(lang=lang, voice_name=voice_name, text=text, rate=rate, volume=volume, style=style, styledegree=style_degree, multilingual=multilingual, pitch=pitch)
+        
+        audio_output_config = speechsdk.audio.AudioOutputConfig(use_default_speaker=True)
+        speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=self.speech_config, audio_config=audio_output_config)
+        result = speech_synthesizer.speak_ssml_async(ssml).get()
+        
+        if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
+            update_status(STATUS_MESSAGES.reset_status)
+            return True, speechsdk.AudioDataStream(result)
+        elif result.reason == speechsdk.ResultReason.Canceled:
+            cancellation_details = result.cancellation_details
+            error_message = f"Preview failed: {cancellation_details.reason}"
+            if cancellation_details.reason == speechsdk.CancellationReason.Error:
+                error_message += f" - Error details: {cancellation_details.error_details}"
+            print(error_message)
+            update_status(STATUS_MESSAGES.synthesis_failed)
+            return False, error_message
+        return False, "Unknown Azure preview error."
 
 config_dir = os.path.join(script_path, 'config')
 settings_file = os.path.join(config_dir, 'TTS_settings.json')
@@ -2193,6 +2286,19 @@ def print_srt(subtitles, framerate):
         end_time = frame_to_timecode(subtitle['end'], framerate)
         print(f"{index + 1}\n{start_time} --> {end_time}\n{subtitle['text']}\n")
 
+def update_status(status_tuple):
+    """
+    更新状态信息：
+    如果 items["LangEnCheckBox"].Checked 为 True，则选择英文，
+    否则选择中文。
+    """
+    use_english = items["LangEnCheckBox"].Checked
+    # 元组索引 0 为英文，1 为中文
+    message = status_tuple[0] if use_english else status_tuple[1]
+    items["StatusLabel"].Text = message
+    items["minimaxStatusLabel"].Text = message
+    items["OpenAIStatusLabel"].Text = message
+    minimax_clone_items["minimaxCloneStatus"].Text = message
 
 def on_getsub_button_clicked(ev):
     frame_rate = float(current_project.GetSetting("timelineFrameRate"))
@@ -2205,7 +2311,7 @@ def on_getsub_button_clicked(ev):
 win.On.GetSubButton.Clicked = on_getsub_button_clicked
 win.On.minimaxGetSubButton.Clicked = on_getsub_button_clicked
 win.On.OpenAIGetSubButton.Clicked = on_getsub_button_clicked
-
+#============== Azure ====================#
 def process_text_with_breaks(parent, text):
     parts = text.split('<break')
     for i, part in enumerate(parts):
@@ -2322,33 +2428,6 @@ def format_xml(xml_string):
     pretty_xml_as_string = ''.join([line for line in pretty_xml_as_string.split('\n') if line.strip()])
     return pretty_xml_as_string
 
-
-def update_status(status_tuple):
-    """
-    更新状态信息：
-    如果 items["LangEnCheckBox"].Checked 为 True，则选择英文，
-    否则选择中文。
-    """
-    use_english = items["LangEnCheckBox"].Checked
-    # 元组索引 0 为英文，1 为中文
-    message = status_tuple[0] if use_english else status_tuple[1]
-    items["StatusLabel"].Text = message
-    items["minimaxStatusLabel"].Text = message
-    items["OpenAIStatusLabel"].Text = message
-    minimax_clone_items["minimaxCloneStatus"].Text = message
-    
-
-def synthesize_speech(service_region, speech_key, lang, voice_name, subtitle, rate, volume, style, style_degree, multilingual,pitch,audio_format, audio_output_config):
-    speech_config = speechsdk.SpeechConfig(subscription=speech_key, region=service_region)
-    speech_config.set_speech_synthesis_output_format(audio_format)
-    ssml = create_ssml(lang=lang, voice_name=voice_name, text=subtitle, rate=rate, volume=volume, style=style, styledegree=style_degree,multilingual= multilingual,pitch=pitch)
-    print(ssml)
-    
-    speech_synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=audio_output_config)
-    result = speech_synthesizer.speak_ssml_async(ssml).get()
-    
-    return result
-
 def get_current_subtitle(current_timeline):
     frame_rate = float(current_timeline.GetSetting("timelineFrameRate"))
     current_timecode = current_timeline.GetCurrentTimecode()  
@@ -2395,31 +2474,6 @@ def generate_filename(base_path, subtitle, extension):
         if not os.path.exists(filename):
             return filename
 
-def edgetts_speech_synthesis( subtitle, voice_name, rate, pitch, volume, filename, start_frame, end_frame):
-    update_status(STATUS_MESSAGES.synthesizing)   
-    prosody_rate = f"+{int((rate-1)*100)}%" if rate > 1 else f"-{int((1-rate)*100)}%"
-    prosody_pitch = f"+{int((pitch-1)*100)}Hz" if pitch > 1 else f"-{int((1-pitch)*100)}Hz"
-    prosody_volume = f"+{int((volume-1)*100)}%" if volume > 1 else f"-{int((1-volume)*100)}%"
-    print(f"Voice Name: {voice_name}")
-    print(f"Prosody Rate: {prosody_rate}")
-    print(f"Prosody Pitch: {prosody_pitch}")
-    print(f"Prosody Volume: {prosody_volume}")
-    try:
-        communicate = edge_tts.Communicate(subtitle, voice_name, rate=prosody_rate, volume=prosody_volume,pitch=prosody_pitch)
-        communicate.save_sync(filename)
-        time.sleep(1)
-        add_to_media_pool_and_timeline(start_frame, end_frame, filename)
-        update_status(STATUS_MESSAGES.loaded_to_timeline)
-    except ValueError as ve:
-        print(f"ValueError: {ve}")
-        update_status(STATUS_MESSAGES.synthesis_failed)
-    except edge_tts.exceptions.HTTPError as he:
-        print(f"HTTPError: {he}")
-        update_status(STATUS_MESSAGES.synthesis_failed)
-    except Exception as e:
-        print(f"Unexpected error: {e}")
-        update_status(STATUS_MESSAGES.synthesis_failed)
-
 def on_fromsub_button_clicked(ev):
     current_timeline = current_project.GetCurrentTimeline()
     if not current_timeline:
@@ -2428,51 +2482,42 @@ def on_fromsub_button_clicked(ev):
     if items["Path"].Text == '':
         show_warning_message(STATUS_MESSAGES.select_save_path)
         return
-    global subtitle,stream,flag
-    subtitle,start_frame, end_frame = get_current_subtitle(current_timeline)
+
+    try:
+        provider = AzureTTSProvider(
+            api_key=azure_items["ApiKey"].Text,
+            region=azure_items["Region"].Text,
+            use_api=not azure_items["UnuseAPICheckBox"].Checked
+        )
+    except ValueError as e:
+        show_warning_message(STATUS_MESSAGES.enter_api_key)
+        update_status(STATUS_MESSAGES.synthesis_failed)
+        return
+
+    global subtitle, stream, flag
+    subtitle, start_frame, end_frame = get_current_subtitle(current_timeline)
     items['AzureTxt'].PlainText = subtitle
+    
     extension = ".mp3" if azure_items["UnuseAPICheckBox"].Checked else items["OutputFormatCombo"].CurrentText.split(", ")[1]
     filename = generate_filename(items["Path"].Text, subtitle, extension)
-    #print(filename)
+    
     voice_name = return_voice_name(items["NameCombo"].CurrentText)
     rate = items["RateSpinBox"].Value
     pitch = items["PitchSpinBox"].Value
     volume = items["VolumeSpinBox"].Value
-    if azure_items["UnuseAPICheckBox"].Checked:
-        edgetts_speech_synthesis( subtitle, voice_name, rate, pitch, volume, filename, start_frame, end_frame)
-        return
-    if azure_items["ApiKey"].Text == '' or azure_items["Region"].Text == '':
-        show_warning_message(STATUS_MESSAGES.enter_api_key)
-        update_status(STATUS_MESSAGES.synthesis_failed)
-        return
-    update_status(STATUS_MESSAGES.synthesizing)
-    service_region = azure_items["Region"].Text
-    speech_key = azure_items["ApiKey"].Text
     style = get_original_style(items["StyleCombo"].CurrentText)
     style_degree = items["StyleDegreeSpinBox"].Value
     multilingual = items["MultilingualCombo"].CurrentText if items["MultilingualCombo"].CurrentText in lang_translation else next((k for k, v in lang_translation.items() if v == items["MultilingualCombo"].CurrentText), None)
-    output_format = items["OutputFormatCombo"].CurrentText
-    if output_format in audio_formats:
-        audio_format = audio_formats[output_format]
-    else:
+    
+    output_format_text = items["OutputFormatCombo"].CurrentText
+    audio_format = audio_formats.get(output_format_text)
+    if not audio_format and not azure_items["UnuseAPICheckBox"].Checked:
         show_warning_message(STATUS_MESSAGES.unsupported_audio)
         return
 
-    audio_output_config = speechsdk.audio.AudioOutputConfig(filename=filename)
-    
-    result = synthesize_speech(service_region, speech_key, lang, voice_name, subtitle, rate,volume, style, style_degree, multilingual,pitch,audio_format, audio_output_config)
-    
-    if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
-        time.sleep(1)
-        add_to_media_pool_and_timeline(start_frame, end_frame, filename)
+    success, result = provider.synthesize(subtitle, voice_name, rate, pitch, volume, style, style_degree, multilingual, audio_format, filename, start_frame, end_frame)
+    if success:
         flag = False
-    elif result.reason == speechsdk.ResultReason.Canceled:
-        cancellation_details = result.cancellation_details
-        update_status(STATUS_MESSAGES.synthesis_failed)
-        print("Speech synthesis canceled: {}".format(cancellation_details.reason))
-        if cancellation_details.reason == speechsdk.CancellationReason.Error:
-            print("Error details: {}".format(cancellation_details.error_details))
-
 win.On.FromSubButton.Clicked = on_fromsub_button_clicked
 
 def on_fromtxt_button_clicked(ev):
@@ -2483,69 +2528,54 @@ def on_fromtxt_button_clicked(ev):
     if items["Path"].Text == '':
         show_warning_message(STATUS_MESSAGES.select_save_path)
         return
-    global subtitle,stream,flag
+
+    try:
+        provider = AzureTTSProvider(
+            api_key=azure_items["ApiKey"].Text,
+            region=azure_items["Region"].Text,
+            use_api=not azure_items["UnuseAPICheckBox"].Checked
+        )
+    except ValueError as e:
+        show_warning_message(STATUS_MESSAGES.enter_api_key)
+        update_status(STATUS_MESSAGES.synthesis_failed)
+        return
+
+    global subtitle, stream, flag
     subtitle = items["AzureTxt"].PlainText
+    
     extension = ".mp3" if azure_items["UnuseAPICheckBox"].Checked else items["OutputFormatCombo"].CurrentText.split(", ")[1]
     filename = generate_filename(items["Path"].Text, subtitle, extension)
-    #print(filename)
+    
     voice_name = return_voice_name(items["NameCombo"].CurrentText)
     rate = items["RateSpinBox"].Value
     pitch = items["PitchSpinBox"].Value
     volume = items["VolumeSpinBox"].Value
-    if azure_items["UnuseAPICheckBox"].Checked:
-        frame_rate = float(current_timeline.GetSetting("timelineFrameRate"))
-        current_timecode = current_timeline.GetCurrentTimecode()  
-        current_frame = timecode_to_frames(current_timecode, frame_rate)
-        edgetts_speech_synthesis( subtitle, voice_name, rate, pitch, volume, filename, current_frame, current_timeline.GetEndFrame())
+    style = get_original_style(items["StyleCombo"].CurrentText)
+    style_degree = items["StyleDegreeSpinBox"].Value
+    multilingual = items["MultilingualCombo"].CurrentText if items["MultilingualCombo"].CurrentText in lang_translation else next((k for k, v in lang_translation.items() if v == items["MultilingualCombo"].CurrentText), None)
+
+    output_format_text = items["OutputFormatCombo"].CurrentText
+    audio_format = audio_formats.get(output_format_text)
+    if not audio_format and not azure_items["UnuseAPICheckBox"].Checked:
+        show_warning_message(STATUS_MESSAGES.unsupported_audio)
         return
-    if azure_items["ApiKey"].Text == '' or azure_items["Region"].Text == '':
-        show_warning_message(STATUS_MESSAGES.enter_api_key)
-        update_status(STATUS_MESSAGES.synthesis_failed)
-        return
-    print(f"stream:{stream}")
+
+    frame_rate = float(current_timeline.GetSetting("timelineFrameRate"))
+    current_frame = timecode_to_frames(current_timeline.GetCurrentTimecode(), frame_rate)
+    end_frame = current_timeline.GetEndFrame()
+
     if stream and flag:
         stream.save_to_wav_file(filename)
         time.sleep(1)
-        frame_rate = float(current_timeline.GetSetting("timelineFrameRate"))
-        current_timecode = current_timeline.GetCurrentTimecode()  
-        current_frame = timecode_to_frames(current_timecode, frame_rate)
-        add_to_media_pool_and_timeline(current_frame, current_timeline.GetEndFrame(), filename)
+        add_to_media_pool_and_timeline(current_frame, end_frame, filename)
         flag = False
-        stream =None
-    elif not stream and flag:
-        update_status(STATUS_MESSAGES.synthesizing)
-        service_region = azure_items["Region"].Text
-        speech_key = azure_items["ApiKey"].Text
-        style = get_original_style(items["StyleCombo"].CurrentText)
-        style_degree = items["StyleDegreeSpinBox"].Value
-        multilingual = items["MultilingualCombo"].CurrentText if items["MultilingualCombo"].CurrentText in lang_translation else next((k for k, v in lang_translation.items() if v == items["MultilingualCombo"].CurrentText), None)
-        output_format = items["OutputFormatCombo"].CurrentText
-        if output_format in audio_formats:
-            audio_format = audio_formats[output_format]
-        else:
-            show_warning_message(STATUS_MESSAGES.unsupported_audio)
-            return
-
-        audio_output_config = speechsdk.audio.AudioOutputConfig(filename=filename)
-        
-        result = synthesize_speech(service_region, speech_key, lang, voice_name, subtitle, rate,volume, style, style_degree, multilingual,pitch,audio_format, audio_output_config)
-        
-        if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
-            time.sleep(1)
-            frame_rate = float(current_timeline.GetSetting("timelineFrameRate"))
-            current_timecode = current_timeline.GetCurrentTimecode()  
-            current_frame = timecode_to_frames(current_timecode, frame_rate)
-            add_to_media_pool_and_timeline(current_frame, current_timeline.GetEndFrame(), filename)
+        stream = None
+    elif flag:
+        success, result = provider.synthesize(subtitle, voice_name, rate, pitch, volume, style, style_degree, multilingual, audio_format, filename, current_frame, end_frame)
+        if success:
             flag = False
-        elif result.reason == speechsdk.ResultReason.Canceled:
-            cancellation_details = result.cancellation_details
-            update_status(STATUS_MESSAGES.synthesis_failed)
-            print("Speech synthesis canceled: {}".format(cancellation_details.reason))
-            if cancellation_details.reason == speechsdk.CancellationReason.Error:
-                print("Error details: {}".format(cancellation_details.error_details))
     else:
         update_status(STATUS_MESSAGES.media_clip_exists)
-    
 win.On.FromTxtButton.Clicked = on_fromtxt_button_clicked
 
 def on_play_button_clicked(ev):
@@ -2555,45 +2585,43 @@ def on_play_button_clicked(ev):
     if items["AzureTxt"].PlainText == '':
         show_warning_message(STATUS_MESSAGES.prev_txt)
         return
-    if azure_items["ApiKey"].Text == '' or azure_items["Region"].Text == '':
+    
+    try:
+        provider = AzureTTSProvider(
+            api_key=azure_items["ApiKey"].Text,
+            region=azure_items["Region"].Text,
+            use_api=not azure_items["UnuseAPICheckBox"].Checked
+        )
+    except ValueError as e:
         show_warning_message(STATUS_MESSAGES.enter_api_key)
         return
-    update_status(STATUS_MESSAGES.playing)
+
     items["PlayButton"].Enabled = False
-    global subtitle, ssml, stream 
-    service_region = azure_items["Region"].Text
-    speech_key = azure_items["ApiKey"].Text
-    style = get_original_style(items["StyleCombo"].CurrentText)
-    style_degree = items["StyleDegreeSpinBox"].Value
+    
+    global subtitle, ssml, stream
     subtitle = items["AzureTxt"].PlainText
     rate = items["RateSpinBox"].Value
     pitch = items["PitchSpinBox"].Value
     volume = items["VolumeSpinBox"].Value
+    style = get_original_style(items["StyleCombo"].CurrentText)
+    style_degree = items["StyleDegreeSpinBox"].Value
     multilingual = items["MultilingualCombo"].CurrentText if items["MultilingualCombo"].CurrentText in lang_translation else next((k for k, v in lang_translation.items() if v == items["MultilingualCombo"].CurrentText), None)
     voice_name = return_voice_name(items["NameCombo"].CurrentText)
-    output_format = items["OutputFormatCombo"].CurrentText
-    if output_format in audio_formats:
-        audio_format = audio_formats[output_format]
-    else:
+    
+    output_format_text = items["OutputFormatCombo"].CurrentText
+    audio_format = audio_formats.get(output_format_text)
+    if not audio_format and not azure_items["UnuseAPICheckBox"].Checked:
         show_warning_message(STATUS_MESSAGES.unsupported_audio)
+        items["PlayButton"].Enabled = True
         return
 
-    audio_output_config = speechsdk.audio.AudioOutputConfig(use_default_speaker=True)
+    success, result = provider.preview(subtitle, voice_name, rate, pitch, volume, style, style_degree, multilingual, audio_format)
     
-    result = synthesize_speech(service_region, speech_key, lang, voice_name, subtitle, rate, volume, style, style_degree, multilingual,pitch,audio_format, audio_output_config)
-    stream = speechsdk.AudioDataStream(result)
-    if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
+    if success:
+        stream = result
         flagmark()
-        update_status(STATUS_MESSAGES.reset_status)
-    elif result.reason == speechsdk.ResultReason.Canceled:
-        cancellation_details = result.cancellation_details
-        update_status(STATUS_MESSAGES.synthesis_failed)
-        print("Speech synthesis canceled: {}".format(cancellation_details.reason))
-        if cancellation_details.reason == speechsdk.CancellationReason.Error:
-            print("Error details: {}".format(cancellation_details.error_details))
-            
-    items["PlayButton"].Enabled = True  
-
+    
+    items["PlayButton"].Enabled = True
 win.On.PlayButton.Clicked = on_play_button_clicked
 #============== MINIMAX ====================#
 def play_audio_segment(pcm_file, json_file, voice_name, sample_rate=32000, channels=2, sample_width=2):
