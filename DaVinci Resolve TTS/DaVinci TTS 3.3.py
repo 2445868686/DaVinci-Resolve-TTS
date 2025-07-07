@@ -6,7 +6,7 @@ SCRIPT_AUTHOR = "HEIBA"
 SCREEN_WIDTH = 1920
 SCREEN_HEIGHT = 1080
 WINDOW_WIDTH = 800
-WINDOW_HEIGHT = 400
+WINDOW_HEIGHT = 450
 X_CENTER = (SCREEN_WIDTH - WINDOW_WIDTH) // 2
 Y_CENTER = (SCREEN_HEIGHT - WINDOW_HEIGHT) // 2
 
@@ -530,10 +530,15 @@ with open(status_file, "r", encoding="utf-8") as file:
 # 把 JSON 中的每一项都设置为 STATUS_MESSAGES 的类属性
 for key, (en, zh) in status_data.items():
     setattr(STATUS_MESSAGES, key, (en, zh))
-    
-project_manager = resolve.GetProjectManager()
-current_project = project_manager.GetCurrentProject()
-current_timeline = current_project.GetCurrentTimeline()
+
+def connect_resolve():
+    resolve = dvr_script.scriptapp("Resolve")
+    project_manager = resolve.GetProjectManager()
+    project = project_manager.GetCurrentProject()
+    timeline      = project.GetCurrentTimeline()
+    return resolve, project,timeline
+
+resolve, current_project,current_timeline = connect_resolve()
 
 def get_first_empty_track(timeline, start_frame, end_frame, media_type):
     """获取当前播放头位置的第一个空轨道索引"""
@@ -561,9 +566,7 @@ def render_audio_by_marker(output_dir):
     导出完成后，返回可能的音频文件完整路径（字符串）。
     若没有Marker则返回None。
     """
-    project_manager = resolve.GetProjectManager()
-    current_project = project_manager.GetCurrentProject()
-    current_timeline = current_project.GetCurrentTimeline()
+    resolve, current_project,current_timeline = connect_resolve()
     timeline_start_frame = current_timeline.GetStartFrame()
     current_project.SetCurrentRenderMode(1)
     current_mode = current_project.GetCurrentRenderMode()
@@ -624,8 +627,7 @@ def render_audio_by_marker(output_dir):
 
 
 def add_to_media_pool_and_timeline(start_frame, end_frame, filename):
-    project_manager = resolve.GetProjectManager()
-    current_project = project_manager.GetCurrentProject()
+    resolve, current_project,current_timeline = connect_resolve()
     media_pool = current_project.GetMediaPool()
     root_folder = media_pool.GetRootFolder()
     tts_folder = None
@@ -658,7 +660,6 @@ def add_to_media_pool_and_timeline(start_frame, end_frame, filename):
     print(f"Imported clip: {selected_clip.GetName()}")
 
     # 获取当前时间线
-    current_timeline = current_project.GetCurrentTimeline()
     frame_rate = float(current_timeline.GetSetting("timelineFrameRate"))
     clip_duration_frames = timecode_to_frames(selected_clip.GetClipProperty("Duration"), frame_rate)
 
@@ -2048,9 +2049,7 @@ def on_subtitle_text_changed(ev):
 win.On.AzureTxt.TextChanged = on_subtitle_text_changed
 
 def on_minimax_only_add_id_checkbox_clicked(ev):
-    project_manager = resolve.GetProjectManager()
-    current_project = project_manager.GetCurrentProject()
-    current_timeline = current_project.GetCurrentTimeline()
+    resolve, current_project,current_timeline = connect_resolve()
 
     if not current_timeline:
         print("❌ 当前没有打开的时间线。")
@@ -2067,7 +2066,7 @@ def on_minimax_only_add_id_checkbox_clicked(ev):
     marker_duration = 250
     if checked:
         success = current_timeline.DeleteMarkerByCustomData(marker_date)
-        print("✅ 成功删除 Marker！" if success else "❌ 删除 Marker 失败，请手动删除")
+        print("✅ Marker removed successfully!" if success else "❌ Failed to remove marker, please remove it manually")
     else:
         current_timeline.DeleteMarkerAtFrame(marker_frame)
         success = current_timeline.AddMarker(
@@ -2078,7 +2077,7 @@ def on_minimax_only_add_id_checkbox_clicked(ev):
             marker_duration,
             marker_date
         )
-        print("✅ 成功添加 Marker！" if success else "❌ 添加 Marker 失败，请检查frameId或其他参数是否正确。")
+        print("✅ Marker added successfully!" if success else "❌ Failed to add marker, please check if the frameId or other parameters are correct.")
 
     # 批量处理控件启用状态
     for key in ["minimaxNeedNoiseReduction", "minimaxNeedVolumeNormalization", "minimaxClonePreviewText"]:
@@ -2300,6 +2299,11 @@ def update_status(status_tuple):
     items["OpenAIStatusLabel"].Text = message
     minimax_clone_items["minimaxCloneStatus"].Text = message
 
+def print_text_on_box(text):
+    items['AzureTxt'].PlainText = text
+    items['minimaxText'].PlainText = text
+    items['OpenAIText'].PlainText = text
+
 def on_getsub_button_clicked(ev):
     frame_rate = float(current_project.GetSetting("timelineFrameRate"))
     subtitles = get_subtitles(current_timeline)
@@ -2496,7 +2500,7 @@ def on_fromsub_button_clicked(ev):
 
     global subtitle, stream, flag
     subtitle, start_frame, end_frame = get_current_subtitle(current_timeline)
-    items['AzureTxt'].PlainText = subtitle
+    print_text_on_box(subtitle)
     
     extension = ".mp3" if azure_items["UnuseAPICheckBox"].Checked else items["OutputFormatCombo"].CurrentText.split(", ")[1]
     filename = generate_filename(items["Path"].Text, subtitle, extension)
@@ -2994,6 +2998,7 @@ def process_minimax_request(text_func, timeline_func):
 
     # 4. Call synthesis logic
     text = text_func()
+    print_text_on_box(text)
     result = provider.synthesize(
         text=text,
         model=items["minimaxModelCombo"].CurrentText,
@@ -3052,9 +3057,7 @@ def process_minimax_request(text_func, timeline_func):
     update_status(STATUS_MESSAGES.loaded_to_timeline)
 
 def on_minimax_fromsub_button_clicked(ev):
-    project_manager = resolve.GetProjectManager()
-    current_project = project_manager.GetCurrentProject()
-    current_timeline = current_project.GetCurrentTimeline()
+    resolve, current_project,current_timeline = connect_resolve()
     if not current_timeline:
         show_warning_message(STATUS_MESSAGES.create_timeline)
         return
@@ -3069,9 +3072,7 @@ def on_minimax_fromsub_button_clicked(ev):
 win.On.minimaxFromSubButton.Clicked = on_minimax_fromsub_button_clicked
 
 def on_minimax_fromtxt_button_clicked(ev):
-    project_manager = resolve.GetProjectManager()
-    current_project = project_manager.GetCurrentProject()
-    current_timeline = current_project.GetCurrentTimeline()
+    resolve, current_project,current_timeline = connect_resolve()
     if not current_timeline:
         show_warning_message(STATUS_MESSAGES.create_timeline)
         return
@@ -3150,6 +3151,7 @@ def process_openai_request(text_func, timeline_func):
 
     # 3. Call synthesis logic
     text = text_func()
+    print_text_on_box(text)
     audio_content = provider.synthesize(
         text=text,
         model=items["OpenAIModelCombo"].CurrentText,
@@ -3176,9 +3178,7 @@ def process_openai_request(text_func, timeline_func):
         update_status(STATUS_MESSAGES.synthesis_failed)
 
 def on_openai_fromsub_button_clicked(ev):
-    project_manager = resolve.GetProjectManager()
-    current_project = project_manager.GetCurrentProject()
-    current_timeline = current_project.GetCurrentTimeline()
+    resolve, current_project,current_timeline = connect_resolve()
     if not current_timeline:
         show_warning_message(STATUS_MESSAGES.create_timeline)
         return False
@@ -3190,9 +3190,7 @@ def on_openai_fromsub_button_clicked(ev):
 win.On.OpenAIFromSubButton.Clicked = on_openai_fromsub_button_clicked
 
 def on_openai_fromtxt_button_clicked(ev):
-    project_manager = resolve.GetProjectManager()
-    current_project = project_manager.GetCurrentProject()
-    current_timeline = current_project.GetCurrentTimeline()
+    resolve, current_project,current_timeline = connect_resolve()
     if not current_timeline:
         show_warning_message(STATUS_MESSAGES.create_timeline)
         return False
