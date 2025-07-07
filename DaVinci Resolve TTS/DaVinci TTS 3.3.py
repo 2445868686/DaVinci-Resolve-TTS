@@ -532,7 +532,7 @@ for key, (en, zh) in status_data.items():
     setattr(STATUS_MESSAGES, key, (en, zh))
 
 def connect_resolve():
-    resolve = dvr_script.scriptapp("Resolve")
+    #resolve = dvr_script.scriptapp("Resolve")
     project_manager = resolve.GetProjectManager()
     project = project_manager.GetCurrentProject()
     timeline      = project.GetCurrentTimeline()
