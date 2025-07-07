@@ -2867,7 +2867,8 @@ def on_minimax_clone_confirm(ev):
 
         upload_result = provider.upload_file_for_clone(audio_path)
         if upload_result["error_message"]:
-            attr = f"error_{upload_result["error_code"]}"
+            err_code = upload_result["error_code"]
+            attr = f"error_{err_code}"
             status_tuple = getattr(
                     STATUS_MESSAGES,
                     attr,
@@ -2892,7 +2893,8 @@ def on_minimax_clone_confirm(ev):
     )
 
     if clone_result["error_message"]:
-        attr = f"error_{clone_result["error_code"]}"
+        err_code = clone_result["error_code"]
+        attr = f"error_{err_code}"
         status_tuple = getattr(
                 STATUS_MESSAGES,
                 attr,
@@ -3013,7 +3015,8 @@ def process_minimax_request(text_func, timeline_func):
 
     # 5. Handle result
     if result["error_message"]:
-        attr = f"error_{result["error_code"]}"
+        err_code = result["error_code"]
+        attr = f"error_{err_code}"
         status_tuple = getattr(
                 STATUS_MESSAGES,
                 attr,
