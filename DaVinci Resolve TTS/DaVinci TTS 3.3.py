@@ -2821,9 +2821,14 @@ win.On.minimaxDeleteVoice.Clicked = on_delete_minimax_clone_voice
 
 def on_minimax_clone_confirm(ev):
     # 1. Parameter validation
-    if not all([minimax_items["minimaxGroupID"].Text, minimax_items["minimaxApiKey"].Text, items["Path"].Text]):
-        show_warning_message(STATUS_MESSAGES.enter_api_key if not items["Path"].Text else STATUS_MESSAGES.select_save_path)
+    if not minimax_items["minimaxGroupID"].Text or not minimax_items["minimaxApiKey"].Text:
+        show_warning_message(STATUS_MESSAGES.enter_api_key)
         return
+
+    if not items["Path"].Text:
+        show_warning_message(STATUS_MESSAGES.select_save_path)
+        return
+
     
     global minimax_clone_voices
     voice_name = minimax_clone_items["minimaxCloneVoiceName"].Text.strip()
@@ -2967,10 +2972,16 @@ def process_minimax_request(text_func, timeline_func):
     api_key = minimax_items["minimaxApiKey"].Text
     group_id = minimax_items["minimaxGroupID"].Text
 
-    if not all([save_path, api_key, group_id]):
-        show_warning_message(STATUS_MESSAGES.select_save_path if not save_path else STATUS_MESSAGES.enter_api_key)
+    if not save_path:
+        show_warning_message(STATUS_MESSAGES.select_save_path)
         update_status(STATUS_MESSAGES.synthesis_failed)
         return
+
+    if not api_key or not group_id:
+        show_warning_message(STATUS_MESSAGES.enter_api_key)
+        update_status(STATUS_MESSAGES.synthesis_failed)
+        return
+
 
     update_status(STATUS_MESSAGES.synthesizing)
 
