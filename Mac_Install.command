@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
+# 获取管理员权限
+if [ "$EUID" -ne 0 ]; then
+  echo "Enter Password："
+  exec sudo "$0" "$@"
+  exit
+fi
 # ———————— 配置变量 ————————
 PYTHON=python3
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WHEEL_DIR="/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/HB/DaVinci TTS/wheel"
-TARGET_DIR="/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/HB/DaVinci TTS/Lib"
+SCRIPT_NAME="DaVinci TTS"
+
+WHEEL_DIR="/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/HB/$SCRIPT_NAME/wheel"
+TARGET_DIR="/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/HB/$SCRIPT_NAME/Lib"
 PACKAGES=(requests azure-cognitiveservices-speech edge-tts pypinyin)
 PIP_MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple"
 
