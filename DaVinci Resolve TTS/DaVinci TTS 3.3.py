@@ -30,6 +30,54 @@ import webbrowser
 from xml.dom import minidom
 import xml.etree.ElementTree as ET
 from typing import Dict, Any, List, Optional
+SCRIPT_PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
+ui = fusion.UIManager
+dispatcher = bmd.UIDispatcher(ui)
+loading_win = dispatcher.AddWindow(
+    {
+        "ID": "LoadingWin",                            
+        "WindowTitle": "Loading",                     
+        "Geometry": [X_CENTER, Y_CENTER, WINDOW_WIDTH, WINDOW_HEIGHT],                  
+        "Spacing": 10,                                
+        "StyleSheet": "*{font-size:14px;}"            
+    },
+    [
+        ui.VGroup(                                  
+            [
+                ui.Label(                          
+                    {
+                        "ID": "LoadLabel", 
+                        "Text": "Loading...",
+                        "Alignment": {"AlignHCenter": True, "AlignVCenter": True},
+                    }
+                )
+            ]
+        )
+    ]
+)
+loading_win.Show()
+
+# ================== DaVinci Resolve 接入 ==================
+try:
+    import DaVinciResolveScript as dvr_script
+    from python_get_resolve import GetResolve
+    print("DaVinciResolveScript from Python")
+except ImportError:
+    # mac / windows 常规路径补全
+    if platform.system() == "Darwin": 
+        path1 = "/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting/Examples"
+        path2 = "/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting/Modules"
+    elif platform.system() == "Windows":
+        path1 = os.path.join(os.environ['PROGRAMDATA'], "Blackmagic Design", "DaVinci Resolve", "Support", "Developer", "Scripting", "Examples")
+        path2 = os.path.join(os.environ['PROGRAMDATA'], "Blackmagic Design", "DaVinci Resolve", "Support", "Developer", "Scripting", "Modules")
+    else:
+        raise EnvironmentError("Unsupported operating system")
+    sys.path += [path1, path2]
+    import DaVinciResolveScript as dvr_script
+    from python_get_resolve import GetResolve
+    print("DaVinciResolveScript from DaVinci")
+
+
 try:
     import requests
     from requests.adapters import HTTPAdapter
@@ -37,13 +85,8 @@ try:
     import azure.cognitiveservices.speech as speechsdk
     import edge_tts
 except ImportError:
-    # 1. 获取脚本所在目录（备用）
-    script_path = os.path.dirname(os.path.abspath(sys.argv[0]))
-
-    # 2. 根据不同平台设置 Lib 目录为绝对路径
     system = platform.system()
     if system == "Windows":
-        # Windows 下 C:\ProgramData\Blackmagic Design\DaVinci Resolve\Fusion\TTS\Lib
         program_data = os.environ.get("PROGRAMDATA", r"C:\ProgramData")
         lib_dir = os.path.join(
             program_data,
@@ -55,7 +98,6 @@ except ImportError:
             "Lib"
         )
     elif system == "Darwin":
-        # macOS 下 /Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/TTS/Lib
         lib_dir = os.path.join(
             "/Library",
             "Application Support",
@@ -67,19 +109,14 @@ except ImportError:
             "Lib"
         )
     else:
-        # 其他平台（Linux 等），回退到相对路径
         lib_dir = os.path.normpath(
-            os.path.join(script_path, "..", "..", "..","HB", SCRIPT_NAME, "Lib")
+            os.path.join(SCRIPT_PATH, "..", "..", "..","HB", SCRIPT_NAME, "Lib")
         )
 
-    # 3. 规范化一下路径（去掉多余分隔符或 ..）
     lib_dir = os.path.normpath(lib_dir)
-    # —— 二、插入到 sys.path —— 
     if os.path.isdir(lib_dir):
-        # 放到最前面，确保优先加载
         sys.path.insert(0, lib_dir)
     else:
-        # 如果路径不对，可打印日志帮助调试
         print(f"Warning: The TTS/Lib directory doesn’t exist:：{lib_dir}", file=sys.stderr)
 
     try:
@@ -92,32 +129,7 @@ except ImportError:
     except ImportError as e:
         print("Dependency import failed—please make sure all dependencies are bundled into the Lib directory:", lib_dir, "\nError message:", e)
 
-try:
-    import DaVinciResolveScript as dvr_script
-    from python_get_resolve import GetResolve
-    print("DaVinciResolveScript from Python")
-except ImportError:
-    
-    if platform.system() == "Darwin": 
-        resolve_script_path1 = "/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting/Examples"
-        resolve_script_path2 = "/Library/Application Support/Blackmagic Design/DaVinci Resolve/Developer/Scripting/Modules"
-    elif platform.system() == "Windows": 
-        resolve_script_path1 = os.path.join(os.environ['PROGRAMDATA'], "Blackmagic Design", "DaVinci Resolve", "Support", "Developer", "Scripting", "Examples")
-        resolve_script_path2 = os.path.join(os.environ['PROGRAMDATA'], "Blackmagic Design", "DaVinci Resolve", "Support", "Developer", "Scripting", "Modules")
-    else:
-        raise EnvironmentError("Unsupported operating system")
 
-    sys.path.append(resolve_script_path1)
-    sys.path.append(resolve_script_path2)
-
-    try:
-        import DaVinciResolveScript as dvr_script
-        from python_get_resolve import GetResolve
-        print("DaVinciResolveScript from DaVinci")
-    except ImportError as e:
-        raise ImportError("Unable to import DaVinciResolveScript or python_get_resolve after adding paths") from e
-
-script_path = os.path.dirname(os.path.abspath(sys.argv[0]))
 
 # 创建带重试机制的 session（放在模块初始化，整个脚本共享）
 session = requests.Session()
@@ -447,7 +459,7 @@ class AzureTTSProvider:
             return False, error_message
         return False, "Unknown Azure preview error."
 
-config_dir = os.path.join(script_path, 'config')
+config_dir = os.path.join(SCRIPT_PATH, 'config')
 settings_file = os.path.join(config_dir, 'TTS_settings.json')
 script_info_cn  = load_resource(os.path.join(config_dir, "script_info_cn.html"))
 script_info_en  = load_resource(os.path.join(config_dir, "script_info_en.html"))
@@ -741,8 +753,7 @@ def import_srt_to_timeline(srt_path):
     print(f"字幕已成功加载到时间线: {file_name}")
     return True
 
-ui = fusion.UIManager
-dispatcher = bmd.UIDispatcher(ui)
+
 
 win = dispatcher.AddWindow({
     "ID": "MainWin", 
@@ -3326,7 +3337,7 @@ def on_azure_register_link_button_clicked(ev):
 azure_config_window.On.AzureRegisterButton.Clicked = on_azure_register_link_button_clicked
 
 def on_open_guide_button_clicked(ev):
-    html_path  = os.path.join(script_path, 'Installation-Usage-Guide.html') 
+    html_path  = os.path.join(SCRIPT_PATH, 'Installation-Usage-Guide.html') 
     if os.path.exists(html_path):
         webbrowser.open(f'file://{html_path}')
     else:
@@ -3463,6 +3474,7 @@ def on_close(ev):
     dispatcher.ExitLoop()
 win.On.MainWin.Close = on_close
 
+loading_win.Hide() 
 win.Show()
 dispatcher.RunLoop()
 azure_config_window.Hide()
