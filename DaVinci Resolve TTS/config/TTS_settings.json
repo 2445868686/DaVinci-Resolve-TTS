@@ -8,7 +8,7 @@
     "PITCH": 1.0,
     "VOLUME": 1.0,
     "STYLEDEGREE": 1.0,
-    "OUTPUT_FORMATS": 2,
+    "OUTPUT_FORMATS": 0,
     "UNUSE_API": true,
     "minimax_API_KEY": "",
     "minimax_GROUP_ID": "",
