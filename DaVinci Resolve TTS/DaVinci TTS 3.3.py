@@ -1,6 +1,6 @@
 # ================= 用户配置 =================
-SCRIPT_NAME = "DaVinci TTS "
-SCRIPT_VERSION = "3.3"
+SCRIPT_NAME = "DaVinci TTS"
+SCRIPT_VERSION = " 3.3"
 SCRIPT_AUTHOR = "HEIBA"
 
 SCREEN_WIDTH = 1920
@@ -51,7 +51,7 @@ except ImportError:
             "DaVinci Resolve",
             "Fusion",
             "HB",
-            "DaVinci TTS",
+            SCRIPT_NAME,
             "Lib"
         )
     elif system == "Darwin":
@@ -63,13 +63,13 @@ except ImportError:
             "DaVinci Resolve",
             "Fusion",
             "HB",
-            "DaVinci TTS",
+            SCRIPT_NAME,
             "Lib"
         )
     else:
         # 其他平台（Linux 等），回退到相对路径
         lib_dir = os.path.normpath(
-            os.path.join(script_path, "..", "..", "..","HB", "DaVinci TTS", "Lib")
+            os.path.join(script_path, "..", "..", "..","HB", SCRIPT_NAME, "Lib")
         )
 
     # 3. 规范化一下路径（去掉多余分隔符或 ..）
@@ -617,11 +617,17 @@ def render_audio_by_marker(output_dir):
     minimax_clone_items["minimaxCloneStatus"].Text = "Start..."
     current_project.SetRenderSettings(render_settings)
     job_id = current_project.AddRenderJob()
-    render_result = current_project.StartRendering([job_id])
+    if not current_project.StartRendering([job_id],isInteractiveMode=False): # [cite: 97]
+        print("错误: 渲染启动失败")
+        return None
+
     update_status(STATUS_MESSAGES.render_audio)
+    while current_project.IsRenderingInProgress(): # 
+        print("Rendering...")
+        time.sleep(2)  # 每2秒检查一次，避免CPU占用过高
     clone_filename = f"{filename}.mp3"
     clone_file_path = os.path.join(output_dir, clone_filename)
-
+    current_project.DeleteRenderJob(job_id) # 
     return clone_file_path
 
 
