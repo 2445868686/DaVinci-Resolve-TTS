@@ -31,6 +31,7 @@ from xml.dom import minidom
 import xml.etree.ElementTree as ET
 from typing import Dict, Any, List, Optional
 SCRIPT_PATH = os.path.dirname(os.path.abspath(sys.argv[0]))
+AUDIO_TEMP_DIR = os.path.join(SCRIPT_PATH, "audio_temp")
 ui = fusion.UIManager
 dispatcher = bmd.UIDispatcher(ui)
 loading_win = dispatcher.AddWindow(
@@ -227,6 +228,8 @@ class MiniMaxProvider:
 
     def upload_file_for_clone(self, file_path: str) -> Dict[str, Any]:
         """Uploads a file for voice cloning."""
+        print("Uploading...")
+        update_status(STATUS_MESSAGES.file_upload)
         url = self._make_url("/v1/files/upload")
         self.session.headers.pop("Content-Type", None)
 
@@ -237,6 +240,7 @@ class MiniMaxProvider:
                 response = self.session.post(url, data=data, files=files, timeout=300)
                 response.raise_for_status()
                 resp_data = response.json()
+              
 
             if resp_data.get("base_resp", {}).get("status_code") != 0:
                 error_info = self._handle_api_error(resp_data)
@@ -571,7 +575,17 @@ def get_first_empty_track(timeline, start_frame, end_frame, media_type):
             return track_index
         
         track_index += 1
-        
+
+def load_audio_only_preset(project, keyword="audio only"):
+    presets = project.GetRenderPresetList() or []
+    def norm(x): return (x if isinstance(x, str) else x.get("PresetName","")).lower()
+    hit = next((p for p in presets if keyword in norm(p)), None)
+    if hit:
+        name = hit if isinstance(hit, str) else hit.get("PresetName")
+        if project.LoadRenderPreset(name): return name
+    if project.LoadRenderPreset("Audio Only"): return "Audio Only"
+    return None
+      
 def render_audio_by_marker(output_dir):
     """
     使用当前Project、当前Timeline的第一个Marker，导出相应区段的音频（单一剪辑模式）。
@@ -612,6 +626,8 @@ def render_audio_by_marker(output_dir):
     
     filename = f"clone_{current_timeline.GetUniqueId()}"
     #current_project.LoadRenderPreset("Audio Only")
+    load_audio_only_preset(current_project)
+    os.makedirs(output_dir, exist_ok=True)
     render_settings = {
         "SelectAllFrames": False,
         "MarkIn": mark_in,
@@ -621,10 +637,9 @@ def render_audio_by_marker(output_dir):
         "UniqueFilenameStyle": 1,   # 1 => 序号添加在后缀
         "ExportVideo": False,
         "ExportAudio": True,
-        "AudioCodec": "mp3",
-        "AudioBitDepth": 32,        # 32-bit 浮点数若不被支持, 可尝试改成 16 或 24
+        "AudioCodec": "LinearPCM",
+        "AudioBitDepth": 16,        # 32-bit 浮点数若不被支持, 可尝试改成 16 或 24
         "AudioSampleRate": 48000,
-        #"Format": "mp3",           # 容器格式
     }
     minimax_clone_items["minimaxCloneStatus"].Text = "Start..."
     current_project.SetRenderSettings(render_settings)
@@ -637,7 +652,9 @@ def render_audio_by_marker(output_dir):
     while current_project.IsRenderingInProgress(): # 
         print("Rendering...")
         time.sleep(2)  # 每2秒检查一次，避免CPU占用过高
-    clone_filename = f"{filename}.mp3"
+
+    print("Render complete!")
+    clone_filename = f"{filename}.wav"
     clone_file_path = os.path.join(output_dir, clone_filename)
     current_project.DeleteRenderJob(job_id) # 
     return clone_file_path
@@ -1833,26 +1850,14 @@ def switch_language(lang):
     for cn, en in emotions:
         items["minimaxEmotionCombo"].AddItem(en if checked else cn)
 
+def on_lang_checkbox_clicked(ev):
+    is_en_checked = ev['sender'].ID == "LangEnCheckBox"
+    items["LangCnCheckBox"].Checked = not is_en_checked
+    items["LangEnCheckBox"].Checked = is_en_checked
+    switch_language("en" if is_en_checked else "cn")
 
-def on_cn_checkbox_clicked(ev):
-    items["LangEnCheckBox"].Checked = not items["LangCnCheckBox"].Checked
-    if items["LangEnCheckBox"].Checked:
-        switch_language("en")
-        print("en")
-    else:
-        print("cn")
-        switch_language("cn")
-win.On.LangCnCheckBox.Clicked = on_cn_checkbox_clicked
-
-def on_en_checkbox_clicked(ev):
-    items["LangCnCheckBox"].Checked = not items["LangEnCheckBox"].Checked
-    if items["LangEnCheckBox"].Checked:
-        switch_language("en")
-        print("en")
-    else:
-        print("cn")
-        switch_language("cn")
-win.On.LangEnCheckBox.Clicked = on_en_checkbox_clicked
+win.On.LangCnCheckBox.Clicked = on_lang_checkbox_clicked
+win.On.LangEnCheckBox.Clicked = on_lang_checkbox_clicked
 
 def update_name_combo(items, lang, voice_dict):
     items["NameCombo"].Clear()
@@ -2789,8 +2794,11 @@ def add_clone_voice(
     # 4. 保存并刷新 UI
     save_clone_data(voice_file, data)
     refresh_voice_combo(items, data["minimax_clone_voices"], minimax_voices)
-
+    minimax_clone_items["minimaxCloneFileID"].Text = ""
+    win.Show()
+    minimax_clone_window.Hide()
     show_warning_message(STATUS_MESSAGES.add_clone_succeed)
+    
     return data["minimax_clone_voices"]
 
 def delete_clone_voice(
@@ -2877,11 +2885,11 @@ def on_minimax_clone_confirm(ev):
     file_id_text = minimax_clone_items["minimaxCloneFileID"].Text.strip()
     if not file_id_text:
         update_status(STATUS_MESSAGES.file_upload)
-        audio_path = render_audio_by_marker(items["Path"].Text)
+        audio_path = render_audio_by_marker(AUDIO_TEMP_DIR)
         if not audio_path:
             update_status(STATUS_MESSAGES.render_audio_failed)
             return
-        
+        resolve.OpenPage("edit")
         if os.path.exists(audio_path) and os.path.getsize(audio_path) > 20 * 1024 * 1024:
             show_warning_message(STATUS_MESSAGES.file_size)
             update_status(STATUS_MESSAGES.synthesis_failed)
@@ -2946,6 +2954,8 @@ minimax_clone_window.On.MiniMaxCloneConfirm.Clicked = on_minimax_clone_confirm
 
 def on_minimax_clone_close(ev):
     minimax_clone_items["minimaxCloneFileID"].Text = ""
+    current_timeline.DeleteMarkerAtFrame(0)
+    win.Show()
     minimax_clone_window.Hide()
 minimax_clone_window.On.MiniMaxCloneWin.Close = on_minimax_clone_close
 minimax_clone_window.On.MiniMaxCloneCancel.Clicked = on_minimax_clone_close
@@ -3356,6 +3366,8 @@ def on_show_minimax_clone(ev):
     minimax_clone_items["minimaxNeedNoiseReduction"].Enabled = not minimax_clone_items["minimaxOnlyAddID"].Checked
     minimax_clone_items["minimaxNeedVolumeNormalization"].Enabled = not minimax_clone_items["minimaxOnlyAddID"].Checked
     minimax_clone_items["minimaxClonePreviewText"].Enabled = not minimax_clone_items["minimaxOnlyAddID"].Checked
+    minimax_clone_items["minimaxOnlyAddID"].Checked = True
+    win.Hide()
     minimax_clone_window.Show()
 win.On.ShowMiniMaxClone.Clicked = on_show_minimax_clone
 
@@ -3471,6 +3483,14 @@ win.On.AITranslatorButton.Clicked = on_aitranslator_button
 
 def on_close(ev):
     close_and_save(settings_file)
+    import shutil
+    for temp_dir in [AUDIO_TEMP_DIR]:
+        if os.path.exists(temp_dir):
+            try:
+                shutil.rmtree(temp_dir)
+                print(f"Removed temporary directory: {temp_dir}")
+            except OSError as e:
+                print(f"Error removing directory {temp_dir}: {e.strerror}")
     dispatcher.ExitLoop()
 win.On.MainWin.Close = on_close
 
