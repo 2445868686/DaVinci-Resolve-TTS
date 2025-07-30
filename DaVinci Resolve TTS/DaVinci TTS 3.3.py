@@ -12,9 +12,10 @@ Y_CENTER = (SCREEN_HEIGHT - WINDOW_HEIGHT) // 2
 
 SCRIPT_KOFI_URL="https://ko-fi.com/heiba"
 SCRIPT_WX_URL = "https://mp.weixin.qq.com/s?__biz=MzUzMTk2MDU5Nw==&mid=2247484626&idx=1&sn=e5eef7e48fbfbf37f208ed9a26c5475a&chksm=fabbc2a8cdcc4bbefcb7f6c72a3754335c25ec9c3e408553ec81c009531732e82cbab923276c#rd"
-AIRANSLATOR_KOFI_URL         = "https://ko-fi.com/s/706feb3730"
-AIRANSLATOR_TAOBAO_URL       = "https://item.taobao.com/item.htm?id=941978471966&pisk=gmixjtVnkLBAk6oYEx8lsCfgBuJoDUD42jkCj5Vc5bh-CjN0srasFYw3hsw_CAw_XbGM3SD6gfnTNoaZo5V06lHZ9LAHxHDq3lrXtBxhSo87Vk5_CP1GNzwTX-iubvUx3lr6tTj6-HHqgqUTVGw_FLegIs1s1rt7F7yFhlNb5__7d7Z_frafV_wUKisbGS9JVJyOhss_1_Z7nJb_flGsFLeaN-Z_fUXJ676bsG3h-ZNfaUaffGi8HzTon7tqd0wx7WHjDGs67-UYOxNJGOnwyPhYk0xAT-3Spbyx_HS4cP3jRoi99nESL4cbefOdW7gK0cUnDBQUGmPZ9ogJNiE_0JHT-4v1J70sU0U-DeXaUmDs0yqBYsNirvnTBcRw2XHjM2aIcsIPyDmLlof39RbXeLQN7rwPjSA3qzqXeBe8tKKO7NzyU8FHeLQN7rwzeWvvXN7azL5..&spm=a21xtw.29178619.0.0"
-
+AI_TRANSLATOR_KOFI_URL         = "https://ko-fi.com/s/706feb3730"
+AI_TRANSLATOR_TAOBAO_URL       = "https://item.taobao.com/item.htm?id=941978471966&pisk=gmixjtVnkLBAk6oYEx8lsCfgBuJoDUD42jkCj5Vc5bh-CjN0srasFYw3hsw_CAw_XbGM3SD6gfnTNoaZo5V06lHZ9LAHxHDq3lrXtBxhSo87Vk5_CP1GNzwTX-iubvUx3lr6tTj6-HHqgqUTVGw_FLegIs1s1rt7F7yFhlNb5__7d7Z_frafV_wUKisbGS9JVJyOhss_1_Z7nJb_flGsFLeaN-Z_fUXJ676bsG3h-ZNfaUaffGi8HzTon7tqd0wx7WHjDGs67-UYOxNJGOnwyPhYk0xAT-3Spbyx_HS4cP3jRoi99nESL4cbefOdW7gK0cUnDBQUGmPZ9ogJNiE_0JHT-4v1J70sU0U-DeXaUmDs0yqBYsNirvnTBcRw2XHjM2aIcsIPyDmLlof39RbXeLQN7rwPjSA3qzqXeBe8tKKO7NzyU8FHeLQN7rwzeWvvXN7azL5..&spm=a21xtw.29178619.0.0"
+WHISPER_KOFI_URL = "https://ko-fi.com/s/da133415d5"
+WHISPER_TAOBAO_URL = "https://item.taobao.com/item.htm?ft=t&id=959855444978"
 OPENAI_FM = "https://openai.fm"
 MINIMAX_PREW_URL = "https://www.minimax.io/audio/voices"
 MINIMAXI_PREW_URL = "https://www.minimaxi.com/audio/voices"
@@ -991,7 +992,12 @@ win = dispatcher.AddWindow({
                             
                         ]),
                         ui.Label({"ID":"MoreScriptLabel","Text":"","Weight":0.1,"Alignment": {"AlignHCenter": True, "AlignVCenter": True}}),
-                        ui.Button({"ID":"AITranslatorButton","Text":"AI字幕翻译插件","Weight":0.1}),
+                        
+                        ui.HGroup({"Weight": 0.1}, [
+                            ui.Button({"ID":"WhisperButton","Text":"AI字幕生成","Weight":0.1}),
+                            ui.Button({"ID":"AITranslatorButton","Text":"AI字幕翻译","Weight":0.1}),
+                        ]),
+                        
                         ui.HGroup({"Weight": 0.1}, [
                             ui.CheckBox({"ID": "LangEnCheckBox", "Text": "EN", "Checked": True, "Alignment": {"AlignRight": True}, "Weight": 0}),
                             ui.CheckBox({"ID": "LangCnCheckBox", "Text": "简体中文", "Checked": False, "Alignment": {"AlignRight": True}, "Weight": 1}),
@@ -1254,7 +1260,8 @@ translations = {
         "UnuseAPICheckBox":"停用 API",
         "minimaxSubtitleCheckBox":"生成srt字幕",
         "MoreScriptLabel":"\n———————————更多功能———————————",
-        "AITranslatorButton":"AI字幕翻译插件",
+        "AITranslatorButton":"AI字幕翻译",
+        "WhisperButton":"AI字幕生成",
         "AzureConfirm":"确定",
         "AzureRegisterButton":"注册",
         "minimaxLabel":"填写MiniMax API信息",
@@ -1349,7 +1356,8 @@ translations = {
         "minimaxCloneLabel":"Add MiniMax Clone Voice",
         "minimaxCloneVoiceNameLabel":"Voice Name",
         "MoreScriptLabel":"\n—————————MORE FEATURES—————————",
-        "AITranslatorButton":"AI Subtitle Translator Script",
+        "AITranslatorButton":"AI-Translated Subtitles",
+        "WhisperButton":"AI-Generated Subtitles",
         #"minimaxCloneGuide":"$3 per voice. \n\nYou won’t be charged for cloning a voice right away \n\n the cloning fee will only be charged the first time you use that cloned voice for speech synthesis.",
         "minimaxCloneVoiceIDLabel":"Voice ID",
         "minimaxCloneFileIDLabel":"File ID",
@@ -3476,10 +3484,17 @@ win.On.ResetButton.Clicked = on_reset_button_clicked
 
 def on_aitranslator_button(ev):
     if items["LangEnCheckBox"].Checked :
-        webbrowser.open(AIRANSLATOR_KOFI_URL)
+        webbrowser.open(AI_TRANSLATOR_KOFI_URL)
     else :
-        webbrowser.open(AIRANSLATOR_TAOBAO_URL)
+        webbrowser.open(AI_TRANSLATOR_TAOBAO_URL)
 win.On.AITranslatorButton.Clicked = on_aitranslator_button
+
+def on_whisper_button(ev):
+    if items["LangEnCheckBox"].Checked :
+        webbrowser.open(WHISPER_KOFI_URL)
+    else :
+        webbrowser.open(WHISPER_TAOBAO_URL)
+win.On.WhisperButton.Clicked = on_whisper_button
 
 def on_close(ev):
     close_and_save(settings_file)
