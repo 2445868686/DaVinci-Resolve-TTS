@@ -1,6 +1,6 @@
 # ================= 用户配置 =================
 SCRIPT_NAME = "DaVinci TTS"
-SCRIPT_VERSION = " 3.3"
+SCRIPT_VERSION = " 3.4"
 SCRIPT_AUTHOR = "HEIBA"
 
 SCREEN_WIDTH = 1920
@@ -20,6 +20,139 @@ OPENAI_FM = "https://openai.fm"
 MINIMAX_PREW_URL = "https://www.minimax.io/audio/voices"
 MINIMAXI_PREW_URL = "https://www.minimaxi.com/audio/voices"
 
+AZURE_STYLE_MAP = {
+    "cheerful": "愉悦",
+    "angry": "愤怒",
+    "chat": "聊天",
+    "customerservice": "客服",
+    "empathetic": "同理心",
+    "excited": "兴奋",
+    "friendly": "友好",
+    "hopeful": "有希望的",
+    "narration-professional": "专业叙述",
+    "newscast-casual": "新闻播报-休闲",
+    "newscast-formal": "新闻播报-正式",
+    "newscast": "新闻播报",
+    "sad": "悲伤",
+    "livecommercial":"实时广告",
+    "story":"故事",
+    "shouting": "喊叫",
+    "terrified": "害怕",
+    "unfriendly": "不友好",
+    "whispering": "耳语",
+    "whisper": "耳语",
+    "affectionate": "撒娇",
+    "calm": "平静",
+    "disgruntled": "不满",
+    "embarrassed": "尴尬",
+    "fearful": "害怕",
+    "gentle": "温柔",
+    "serious": "严肃",
+    "assistant": "助手",
+    "chat-casual": "聊天-休闲",
+    "lyrical": "抒情",
+    "poetry-reading": "诗歌朗诵",
+    "sorry": "抱歉",
+    "advertisement-upbeat": "广告-积极",
+    "depressed": "沮丧",
+    "envious": "嫉妒",
+    "documentary-narration": "纪录片叙述",
+    "narration-relaxed": "叙述-放松",
+    "sports-commentary": "体育评论",
+    "sports-commentary-excited": "体育评论-兴奋"
+}
+
+AZURE_NAME_TYPE_MAP = {
+    "女性": "Female",
+    "男性": "Male",
+    "儿童": "Child",
+    "中性": "Neutral"
+}
+
+MINIMAX_MODELS = [
+    "speech-2.5-hd-preview",
+    "speech-2.5-turbo-preview",
+    "speech-02-hd",
+    "speech-02-turbo",
+    "speech-01-hd",
+    "speech-01-turbo",
+]
+
+MINIMAX_LANGUAGES = [
+    "中文（普通话）", "中文（粤语）", "English", "Japanese", "Korean",
+    "Spanish", "Portuguese", "French", "Indonesian", "German", "Russian",
+    "Italian", "Arabic", "Turkish", "Ukrainian", "Vietnamese", "Dutch"
+]
+
+
+MINIMAX_EMOTIONS = [
+    ("默认", "Default"),
+    ("高兴", "happy"),
+    ("悲伤", "sad"),
+    ("愤怒", "angry"),
+    ("害怕", "fearful"),
+    ("厌恶", "disgusted"),
+    ("惊讶", "surprised"),
+    ("中性", "neutral")
+]
+MINIMAX_SOUND_EFFECTS = [
+    ("默认", "Default"),
+    ("空旷回音", "spacious_echo"),
+    ("礼堂广播", "auditorium_echo"),
+    ("电话失真", "lofi_telephone"),
+    ("机械音", "robotic"),
+]
+
+
+OPENAI_MODELS = [
+    "gpt-4o-mini-tts",
+    "tts-1",
+    "tts-1-hd",
+]
+
+DEFAULT_SETTINGS = {
+    "Path": "",
+    "UNUSE_API":False,
+    "API_KEY": '',
+    "REGION": '',
+    "LANGUAGE": 0,
+    "TYPE": 0,
+    "NAME": 0,
+    "RATE": 1.0,
+    "PITCH": 1.0,
+    "VOLUME": 1.0,
+    "STYLE": 0,
+    "BREAKTIME":50,
+    "STYLEDEGREE": 1.0,
+    "OUTPUT_FORMATS":2,
+
+    "minimax_API_KEY": "",
+    "minimax_GROUP_ID": "",
+    "minimax_intlCheckBox":False,
+
+    "minimax_Model": 0,
+    "minimax_Voice": 0,
+    "minimax_Language": 0,
+    "minimax_SubtitleCheckBox":False,
+    "minimax_Emotion": 0,
+    "minimax_Rate": 1.0,
+    "minimax_Volume": 1.0,
+    "minimax_Pitch": 0,
+    "minimax_Format": 0,
+    "minimax_Break":50,
+
+    "OpenAI_API_KEY": "",
+    "OpenAI_BASE_URL": "",
+    "OpenAI_Model": 0,
+    "OpenAI_Voice": 0,
+    "OpenAI_Rate": 1.0,
+    "OpenAI_Format": 0,
+    "OpenAI_Instruction":"",
+    "OpenAI_Preset":0,
+    
+    "CN":True,
+    "EN":False,
+}
 import os
 import sys
 import platform
@@ -192,7 +325,7 @@ class MiniMaxProvider:
         print(error_message)
         return {"error_code": status_code, "error_message": error_message}
 
-    def synthesize(self, text: str, model: str, voice_id: str, speed: float, vol: float, pitch: int, file_format: str, subtitle_enable: bool = False, emotion: Optional[str] = None) -> Dict[str, Any]:
+    def synthesize(self, text: str, model: str, voice_id: str, speed: float, vol: float, pitch: int, file_format: str, subtitle_enable: bool = False, emotion: Optional[str] = None,sound_effects: Optional[str] = None) -> Dict[str, Any]:
         """Synthesizes speech and returns audio content and subtitle URL."""
         url = self._make_url("/v1/t2a_v2")
         self.session.headers["Content-Type"] = "application/json"
@@ -200,11 +333,14 @@ class MiniMaxProvider:
         payload = {
             "model": model, "text": text, "stream": False, "subtitle_enable": subtitle_enable,
             "voice_setting": {"voice_id": voice_id, "speed": speed, "vol": vol, "pitch": pitch},
-            "audio_setting": {"sample_rate": 32000, "bitrate": 128000, "format": file_format, "channel": 2}
+            "audio_setting": {"sample_rate": 32000, "bitrate": 128000, "format": file_format, "channel": 2},
+            "voice_modify": {},  
         }
         if emotion and emotion not in ["默认", "Default"]:
             payload["voice_setting"]["emotion"] = emotion
 
+        if sound_effects and sound_effects not in ["默认", "Default"]:
+            payload["voice_modify"]["sound_effects"] = sound_effects
         print(f"Sending payload to MiniMax: {payload}")
 
         try:
@@ -493,51 +629,7 @@ def save_settings(settings, settings_file):
 
 saved_settings = load_settings(settings_file) 
 
-default_settings = {
-    "Path": "",
-    "UNUSE_API":False,
-    "API_KEY": '',
-    "REGION": '',
-    "LANGUAGE": 0,
-    "TYPE": 0,
-    "NAME": 0,
-    "RATE": 1.0,
-    "PITCH": 1.0,
-    "VOLUME": 1.0,
-    "STYLE": 0,
-    "BREAKTIME":50,
-    "STYLEDEGREE": 1.0,
-    "OUTPUT_FORMATS":2,
 
-    "minimax_API_KEY": "",
-    "minimax_GROUP_ID": "",
-    "minimax_intlCheckBox":False,
-
-    "minimax_Model": 0,
-    "minimax_Voice": 0,
-    "minimax_Language": 0,
-    "minimax_SubtitleCheckBox":False,
-    "minimax_Emotion": 0,
-    "minimax_Rate": 1.0,
-    "minimax_Volume": 1.0,
-    "minimax_Pitch": 0,
-    "minimax_Format": 0,
-    "minimax_Break":50,
-
-    "OpenAI_API_KEY": "",
-    "OpenAI_BASE_URL": "",
-    "OpenAI_Model": 0,
-    "OpenAI_Voice": 0,
-    "OpenAI_Rate": 1.0,
-    "OpenAI_Format": 0,
-    "OpenAI_Instruction":"",
-    "OpenAI_Preset":0,
-    
-    "CN":True,
-    "EN":False,
-
-
-}
 status_file = os.path.join(config_dir, 'status.json')
 
 class STATUS_MESSAGES:
@@ -858,7 +950,7 @@ win = dispatcher.AddWindow({
                 ]),
                 ui.VGroup({"ID": "Minimax TTS", "Weight": 1}, [
                     ui.HGroup({"Weight": 0.7}, [
-                        ui.VGroup({"Weight": 1}, [
+                        ui.VGroup({"Weight": 0.7}, [
                             ui.TextEdit({"ID": "minimaxText", "PlaceholderText": ""}),
                             ui.HGroup({"Weight": 0.1}, [
                                 ui.Button({"ID": "minimaxGetSubButton", "Text": "从时间线获取字幕", "Weight": 0.7}),
@@ -877,17 +969,20 @@ win = dispatcher.AddWindow({
                             ui.HGroup({}, [
                                 ui.Label({"ID": "minimaxVoiceLabel","Text": "音色:", "Weight": 0}),
                                 ui.ComboBox({"ID": "minimaxVoiceCombo", "Text": "选择人声","Weight": 1}),
-                               
                             ]),
                             ui.HGroup({}, [
-                               
                                 ui.Button({"ID": "minimaxPreviewButton", "Text": "试听","Weight": 0.1}),
                                 ui.Button({"ID": "ShowMiniMaxClone", "Text": "","Weight": 0.1}),
                                 ui.Button({"ID": "minimaxDeleteVoice", "Text": "","Weight": 0.1}),
                             ]),
                             ui.HGroup({}, [
+                                ui.Label({"ID": "minimaxSoundEffectLabel","Text": "音效:", "Weight": 0}),
+                                ui.ComboBox({"ID": "minimaxSoundEffectCombo", "Text": "选择情绪"}),
+                                
+                            ]),
+                            ui.HGroup({}, [
                                 ui.Label({"ID": "minimaxEmotionLabel","Text": "情绪:", "Weight": 0}),
-                                ui.ComboBox({"ID": "minimaxEmotionCombo", "Text": "选择情绪"})
+                                ui.ComboBox({"ID": "minimaxEmotionCombo", "Text": "选择情绪"}),                   
                             ]),
                             ui.HGroup({}, [
                                 ui.Label({"ID": "minimaxRateLabel","Text": "速度:", "Weight": 0.2}),
@@ -1223,6 +1318,7 @@ translations = {
         "MultilingualLabel": "语言技能",
         "StyleLabel": "风格",
         "minimaxEmotionLabel": "情绪",
+        "minimaxSoundEffectLabel":"音效",
         "StyleDegreeLabel": "风格强度",
         "RateLabel": "语速",
         "minimaxRateLabel": "语速",
@@ -1355,6 +1451,7 @@ translations = {
         "minimaxLabel":"MiniMax API",
         "minimaxCloneLabel":"Add MiniMax Clone Voice",
         "minimaxCloneVoiceNameLabel":"Voice Name",
+        "minimaxSoundEffectLabel":"Effect",
         "MoreScriptLabel":"\n—————————MORE FEATURES—————————",
         "AITranslatorButton":"AI-Translated Subtitles",
         "WhisperButton":"AI-Generated Subtitles",
@@ -1461,11 +1558,11 @@ if not os.path.exists(voice_file):
 with open(voice_file, "r", encoding="utf-8") as file:
     voices_data = json.load(file)
 
-azure_voices = voices_data.get("azure_voice", {})
-edgeTTS_voices = voices_data.get("edge_voice", {})
-openai_voices = voices_data.get("openai_voice", {}).get("voices", [])
-minimax_voices = voices_data.get("minimax_system_voice", [])
-minimax_clone_voices = voices_data.get("minimax_clone_voices", [])
+AZURE_VOICES = voices_data.get("azure_voice", {})
+EDGETTS_VOICES = voices_data.get("edge_voice", {})
+OPENAI_VOICES = voices_data.get("openai_voice", {}).get("voices", [])
+MINIMAX_VOICES = voices_data.get("minimax_system_voice", [])
+MINIMAX_CLONE_VOICES = voices_data.get("minimax_clone_voices", [])
 
 preset_file = os.path.join(config_dir, 'instruction.json')
 if not os.path.exists(preset_file):
@@ -1494,84 +1591,63 @@ win.On["OpenAIPresetCombo"].CurrentIndexChanged = on_openai_preset_combo_changed
 
 # 将每个子列表转换为元组
 def return_voice_name(name):
-    for lang, data in azure_voices.items():
+    for lang, data in AZURE_VOICES.items():
         for voice in data['voices']:
             voice_name = list(voice.keys())[0]
             if voice[voice_name].get("Name") == name:
                 return voice_name
     return None
 
-# 填充ComboBox
-minimax_models = ["speech-02-hd","speech-02-turbo","speech-01-hd","speech-01-turbo", "speech-01-240228","speech-01-turbo-240228",]
-for model in minimax_models:
+for model in MINIMAX_MODELS:
     items["minimaxModelCombo"].AddItem(model)
 
-openai_models = ["gpt-4o-mini-tts","tts-1", "tts-1-hd"]
-for model in openai_models:
+
+for model in OPENAI_MODELS:
     items["OpenAIModelCombo"].AddItem(model)
 
 
-# 将声音选项添加到 minimaxVoiceCombo
-for voice in openai_voices:
+for voice in OPENAI_VOICES:
     items["OpenAIVoiceCombo"].AddItem(voice)
   
-if minimax_clone_voices:
-    for voice in minimax_clone_voices:
+if MINIMAX_CLONE_VOICES:
+    for voice in MINIMAX_CLONE_VOICES:
         items["minimaxVoiceCombo"].AddItem(voice["voice_name"])
 
-for voice  in minimax_voices:
+for voice  in MINIMAX_VOICES:
     items["minimaxVoiceCombo"].AddItem(voice["voice_name"])  
 
-        
-minimax_language = [
-    "中文（普通话）", "中文（粤语）", "English", "Japanese", "Korean",
-    "Spanish", "Portuguese", "French", "Indonesian", "German", "Russian",
-    "Italian", "Arabic", "Turkish", "Ukrainian", "Vietnamese", "Dutch"
-]
-
-# 将语言选项添加到 minimaxLanguageCombo
-for lang in minimax_language:
+for lang in MINIMAX_LANGUAGES:
     items["minimaxLanguageCombo"].AddItem(lang)  
 
 def update_voice_list(ev):
     global minimax_voice_index_initialized
-    # 当前选中语言
     selected_lang = items["minimaxLanguageCombo"].CurrentText
-    # 清空语音下拉框
-    items["minimaxVoiceCombo"].Clear()  # _README_WORKFLOW_20.txt](file-service://file-27aT4jFAer9mu7jVoLKdot)
-
+    items["minimaxVoiceCombo"].Clear()  
     # 只添加与 selected_lang 匹配的条目
-    for voice in minimax_clone_voices + minimax_voices:
+    for voice in MINIMAX_CLONE_VOICES + MINIMAX_VOICES:
         if voice.get("language") == selected_lang:
             items["minimaxVoiceCombo"].AddItem(voice["voice_name"])
     # 只在第一次设置
     if not minimax_voice_index_initialized:
         items["minimaxVoiceCombo"].CurrentIndex = saved_settings.get(
             "minimax_Voice",
-            default_settings["minimax_Voice"]
+            DEFAULT_SETTINGS["minimax_Voice"]
         )
         minimax_voice_index_initialized = True
 win.On["minimaxLanguageCombo"].CurrentIndexChanged = update_voice_list         
 
 
-# 定义情绪选项
-emotions = [
-    ("默认", "Default"),
-    ("高兴", "happy"),
-    ("悲伤", "sad"),
-    ("愤怒", "angry"),
-    ("害怕", "fearful"),
-    ("厌恶", "disgusted"),
-    ("惊讶", "surprised"),
-    ("中性", "neutral")
-]
-
-# 将情绪选项添加到 minimaxEmotionCombo
-for cn, en in emotions:
+for cn, en in MINIMAX_EMOTIONS:
     if items["LangEnCheckBox"].Checked:
-        items["minimaxEmotionCombo"].AddItem(en)  # 选中时添加英文
+        items["minimaxEmotionCombo"].AddItem(en)  
     else:
-        items["minimaxEmotionCombo"].AddItem(cn)  # 未选中时添加中文
+        items["minimaxEmotionCombo"].AddItem(cn)  
+
+for cn, en in MINIMAX_SOUND_EFFECTS:
+    if items["LangEnCheckBox"].Checked:
+        items["minimaxSoundEffectCombo"].AddItem(en)  
+    else:
+        items["minimaxSoundEffectCombo"].AddItem(cn)  
 
 # 填充格式选项
 items["minimaxFormatCombo"].AddItem("mp3")
@@ -1581,15 +1657,14 @@ items["OpenAIFormatCombo"].AddItem("mp3")
 items["OpenAIFormatCombo"].AddItem("wav")
 
 
-# 模型选项切换逻辑
 def on_minimax_model_combo_changed(event):
     selected_model = items["minimaxModelCombo"].CurrentText
     if selected_model in [ "speech-01-240228","speech-01-turbo-240228",]:
         items["minimaxEmotionCombo"].CurrentIndex = 0
-        items["minimaxEmotionCombo"].Enabled = False  # 启用情绪选择
+        items["minimaxEmotionCombo"].Enabled = False  
     else:
-        items["minimaxEmotionCombo"].Enabled = True  # 禁用情绪选择
-    if selected_model in [ "speech-01-hd","speech-01-turbo",]:
+        items["minimaxEmotionCombo"].Enabled = True  
+    if selected_model in ["speech-02-hd","speech-02-turbo","speech-01-hd","speech-01-turbo",]:
         items["minimaxSubtitleCheckBox"].Enabled = True
     else:
         items["minimaxSubtitleCheckBox"].Checked = False
@@ -1614,65 +1689,16 @@ win.On["OpenAIModelCombo"].CurrentIndexChanged = on_openai_model_combo_changed
 on_minimax_model_combo_changed({"Index": items["minimaxModelCombo"].CurrentIndex})
 on_openai_model_combo_changed({"Index": items["OpenAIModelCombo"].CurrentIndex})
 
-
-# 汉化映射字典
-StyleMapping = {
-    "cheerful": "愉悦",
-    "angry": "愤怒",
-    "chat": "聊天",
-    "customerservice": "客服",
-    "empathetic": "同理心",
-    "excited": "兴奋",
-    "friendly": "友好",
-    "hopeful": "有希望的",
-    "narration-professional": "专业叙述",
-    "newscast-casual": "新闻播报-休闲",
-    "newscast-formal": "新闻播报-正式",
-    "newscast": "新闻播报",
-    "sad": "悲伤",
-    "livecommercial":"实时广告",
-    "story":"故事",
-    "shouting": "喊叫",
-    "terrified": "害怕",
-    "unfriendly": "不友好",
-    "whispering": "耳语",
-    "whisper": "耳语",
-    "affectionate": "撒娇",
-    "calm": "平静",
-    "disgruntled": "不满",
-    "embarrassed": "尴尬",
-    "fearful": "害怕",
-    "gentle": "温柔",
-    "serious": "严肃",
-    "assistant": "助手",
-    "chat-casual": "聊天-休闲",
-    "lyrical": "抒情",
-    "poetry-reading": "诗歌朗诵",
-    "sorry": "抱歉",
-    "advertisement-upbeat": "广告-积极",
-    "depressed": "沮丧",
-    "envious": "嫉妒",
-    "documentary-narration": "纪录片叙述",
-    "narration-relaxed": "叙述-放松",
-    "sports-commentary": "体育评论",
-    "sports-commentary-excited": "体育评论-兴奋"
-}
-NameTypeMapping = {
-    "女性": "Female",
-    "男性": "Male",
-    "儿童": "Child",
-    "中性": "Neutral"
-}
 def translate_styles_to_chinese(style_code):
-    return StyleMapping.get(style_code, style_code)
+    return AZURE_STYLE_MAP.get(style_code, style_code)
 
 def get_original_style(chinese_style):
-    for eng, chi in StyleMapping.items():
+    for eng, chi in AZURE_STYLE_MAP.items():
         if chi == chinese_style:
             return eng
     return chinese_style
 
-for cn, en in NameTypeMapping.items():
+for cn, en in AZURE_NAME_TYPE_MAP.items():
     if items["LangEnCheckBox"].Checked:
         items["NameTypeCombo"].AddItem(en)  # 选中时添加英文
     else:
@@ -1825,6 +1851,7 @@ def switch_language(lang):
     """
     items["NameTypeCombo"].Clear()
     items["minimaxEmotionCombo"].Clear()
+    items["minimaxSoundEffectCombo"].Clear()
 
     if "MyTabs" in items:
         for index, new_name in enumerate(translations[lang]["Tabs"]):
@@ -1851,12 +1878,14 @@ def switch_language(lang):
     checked = items["LangEnCheckBox"].Checked
 
     # 名称类型
-    for cn, en in NameTypeMapping.items():
+    for cn, en in AZURE_NAME_TYPE_MAP.items():
         items["NameTypeCombo"].AddItem(en if checked else cn)
 
     # 情感列表
-    for cn, en in emotions:
+    for cn, en in MINIMAX_EMOTIONS:
         items["minimaxEmotionCombo"].AddItem(en if checked else cn)
+    for cn, en in MINIMAX_SOUND_EFFECTS:
+        items["minimaxSoundEffectCombo"].AddItem(en if checked else cn)
 
 def on_lang_checkbox_clicked(ev):
     is_en_checked = ev['sender'].ID == "LangEnCheckBox"
@@ -1882,9 +1911,9 @@ def update_name_combo(items, lang, voice_dict):
 
 # 从保存的设置中设置 UnuseAPICheckBox 的状态
 if saved_settings:
-    azure_items["UnuseAPICheckBox"].Checked = saved_settings.get("UNUSE_API", default_settings["UNUSE_API"])
-    items["LangCnCheckBox"].Checked = saved_settings.get("CN", default_settings["CN"])
-    items["LangEnCheckBox"].Checked = saved_settings.get("EN", default_settings["EN"])
+    azure_items["UnuseAPICheckBox"].Checked = saved_settings.get("UNUSE_API", DEFAULT_SETTINGS["UNUSE_API"])
+    items["LangCnCheckBox"].Checked = saved_settings.get("CN", DEFAULT_SETTINGS["CN"])
+    items["LangEnCheckBox"].Checked = saved_settings.get("EN", DEFAULT_SETTINGS["EN"])
 
 if items["LangEnCheckBox"].Checked :
     switch_language("en")
@@ -1893,7 +1922,7 @@ else:
 
 
 def get_english_name_type(chinese_name_type):
-    return NameTypeMapping.get(chinese_name_type, chinese_name_type)
+    return AZURE_NAME_TYPE_MAP.get(chinese_name_type, chinese_name_type)
 
 audio_formats = {
     "8k, .wav": speechsdk.SpeechSynthesisOutputFormat.Riff8Khz16BitMonoPcm,
@@ -1912,9 +1941,9 @@ for fmt in audio_formats.keys():
 voice_dict = {}
 
 if azure_items["UnuseAPICheckBox"].Checked:
-    voice_dict = edgeTTS_voices
+    voice_dict = EDGETTS_VOICES
 else:
-    voice_dict = azure_voices
+    voice_dict = AZURE_VOICES
 
 Language = [voice_dict[locale]['language'] for locale in voice_dict.keys()]
 
@@ -1922,40 +1951,40 @@ for language in Language:
     items["LanguageCombo"].AddItem(language)
 
 if saved_settings:
-    azure_items["ApiKey"].Text = saved_settings.get("API_KEY", default_settings["API_KEY"])
-    azure_items["Region"].Text = saved_settings.get("REGION", default_settings["REGION"])
-    items["LanguageCombo"].CurrentIndex = saved_settings.get("LANGUAGE", default_settings["LANGUAGE"])
-    items["NameTypeCombo"].CurrentIndex = saved_settings.get("TYPE", default_settings["TYPE"])
-    items["NameCombo"].CurrentIndex = saved_settings.get("NAME", default_settings["NAME"])
-    items["RateSpinBox"].Value = saved_settings.get("RATE", default_settings["RATE"])
-    items["PitchSpinBox"].Value = saved_settings.get("PITCH", default_settings["PITCH"])
-    items["VolumeSpinBox"].Value = saved_settings.get("VOLUME", default_settings["VOLUME"])
-    items["StyleCombo"].CurrentIndex = saved_settings.get("STYLE", default_settings["STYLE"])
-    items["StyleDegreeSpinBox"].Value = saved_settings.get("STYLEDEGREE", default_settings["STYLEDEGREE"])
-    items["OutputFormatCombo"].CurrentIndex = saved_settings.get("OUTPUT_FORMATS", default_settings["OUTPUT_FORMATS"])
+    azure_items["ApiKey"].Text = saved_settings.get("API_KEY", DEFAULT_SETTINGS["API_KEY"])
+    azure_items["Region"].Text = saved_settings.get("REGION", DEFAULT_SETTINGS["REGION"])
+    items["LanguageCombo"].CurrentIndex = saved_settings.get("LANGUAGE", DEFAULT_SETTINGS["LANGUAGE"])
+    items["NameTypeCombo"].CurrentIndex = saved_settings.get("TYPE", DEFAULT_SETTINGS["TYPE"])
+    items["NameCombo"].CurrentIndex = saved_settings.get("NAME", DEFAULT_SETTINGS["NAME"])
+    items["RateSpinBox"].Value = saved_settings.get("RATE", DEFAULT_SETTINGS["RATE"])
+    items["PitchSpinBox"].Value = saved_settings.get("PITCH", DEFAULT_SETTINGS["PITCH"])
+    items["VolumeSpinBox"].Value = saved_settings.get("VOLUME", DEFAULT_SETTINGS["VOLUME"])
+    items["StyleCombo"].CurrentIndex = saved_settings.get("STYLE", DEFAULT_SETTINGS["STYLE"])
+    items["StyleDegreeSpinBox"].Value = saved_settings.get("STYLEDEGREE", DEFAULT_SETTINGS["STYLEDEGREE"])
+    items["OutputFormatCombo"].CurrentIndex = saved_settings.get("OUTPUT_FORMATS", DEFAULT_SETTINGS["OUTPUT_FORMATS"])
 
-    minimax_items["minimaxApiKey"].Text = saved_settings.get("minimax_API_KEY", default_settings["minimax_API_KEY"])
-    minimax_items["minimaxGroupID"].Text = saved_settings.get("minimax_GROUP_ID", default_settings["minimax_GROUP_ID"])
-    minimax_items["intlCheckBox"].Checked = saved_settings.get("minimax_intlCheckBox", default_settings["minimax_intlCheckBox"])
-    items["Path"].Text = saved_settings.get("Path", default_settings["Path"])
-    items["minimaxModelCombo"].CurrentIndex = saved_settings.get("minimax_Model", default_settings["minimax_Model"])
-    items["minimaxLanguageCombo"].CurrentIndex= saved_settings.get("minimax_Language", default_settings["minimax_Language"])
-    items["minimaxVoiceCombo"].CurrentIndex= saved_settings.get("minimax_Voice", default_settings["minimax_Voice"])
-    items["minimaxSubtitleCheckBox"].Checked = saved_settings.get("minimax_SubtitleCheckBox", default_settings["minimax_SubtitleCheckBox"])
-    items["minimaxEmotionCombo"].CurrentIndex = saved_settings.get("minimax_Emotion", default_settings["minimax_Emotion"])
-    items["minimaxRateSpinBox"].Value = saved_settings.get("minimax_Rate", default_settings["minimax_Rate"])
-    items["minimaxVolumeSpinBox"].Value = saved_settings.get("minimax_Volume", default_settings["minimax_Volume"])
-    items["minimaxPitchSpinBox"].Value = saved_settings.get("minimax_Pitch", default_settings["minimax_Pitch"])
-    items["minimaxFormatCombo"].CurrentIndex = saved_settings.get("minimax_Format", default_settings["minimax_Format"])
+    minimax_items["minimaxApiKey"].Text = saved_settings.get("minimax_API_KEY", DEFAULT_SETTINGS["minimax_API_KEY"])
+    minimax_items["minimaxGroupID"].Text = saved_settings.get("minimax_GROUP_ID", DEFAULT_SETTINGS["minimax_GROUP_ID"])
+    minimax_items["intlCheckBox"].Checked = saved_settings.get("minimax_intlCheckBox", DEFAULT_SETTINGS["minimax_intlCheckBox"])
+    items["Path"].Text = saved_settings.get("Path", DEFAULT_SETTINGS["Path"])
+    items["minimaxModelCombo"].CurrentIndex = saved_settings.get("minimax_Model", DEFAULT_SETTINGS["minimax_Model"])
+    items["minimaxLanguageCombo"].CurrentIndex= saved_settings.get("minimax_Language", DEFAULT_SETTINGS["minimax_Language"])
+    items["minimaxVoiceCombo"].CurrentIndex= saved_settings.get("minimax_Voice", DEFAULT_SETTINGS["minimax_Voice"])
+    items["minimaxSubtitleCheckBox"].Checked = saved_settings.get("minimax_SubtitleCheckBox", DEFAULT_SETTINGS["minimax_SubtitleCheckBox"])
+    items["minimaxEmotionCombo"].CurrentIndex = saved_settings.get("minimax_Emotion", DEFAULT_SETTINGS["minimax_Emotion"])
+    items["minimaxRateSpinBox"].Value = saved_settings.get("minimax_Rate", DEFAULT_SETTINGS["minimax_Rate"])
+    items["minimaxVolumeSpinBox"].Value = saved_settings.get("minimax_Volume", DEFAULT_SETTINGS["minimax_Volume"])
+    items["minimaxPitchSpinBox"].Value = saved_settings.get("minimax_Pitch", DEFAULT_SETTINGS["minimax_Pitch"])
+    items["minimaxFormatCombo"].CurrentIndex = saved_settings.get("minimax_Format", DEFAULT_SETTINGS["minimax_Format"])
     
-    openai_items["OpenAIApiKey"].Text = saved_settings.get("OpenAI_API_KEY", default_settings["OpenAI_API_KEY"])
-    openai_items["OpenAIBaseURL"].Text = saved_settings.get("OpenAI_BASE_URL", default_settings["OpenAI_BASE_URL"])    
-    items["OpenAIModelCombo"].CurrentIndex = saved_settings.get("OpenAI_Model", default_settings["OpenAI_Model"])
-    items["OpenAIVoiceCombo"].CurrentIndex= saved_settings.get("OpenAI_Voice", default_settings["OpenAI_Voice"])
-    items["OpenAIPresetCombo"].CurrentIndex = saved_settings.get("OpenAI_Preset", default_settings["OpenAI_Preset"])
-    items["OpenAIRateSpinBox"].Value = saved_settings.get("OpenAI_Rate", default_settings["OpenAI_Rate"])
-    items["OpenAIFormatCombo"].CurrentIndex = saved_settings.get("OpenAI_Format", default_settings["OpenAI_Format"])
-    items["OpenAIInstructionText"].Text = saved_settings.get("OpenAI_Instruction", default_settings["OpenAI_Instruction"])
+    openai_items["OpenAIApiKey"].Text = saved_settings.get("OpenAI_API_KEY", DEFAULT_SETTINGS["OpenAI_API_KEY"])
+    openai_items["OpenAIBaseURL"].Text = saved_settings.get("OpenAI_BASE_URL", DEFAULT_SETTINGS["OpenAI_BASE_URL"])    
+    items["OpenAIModelCombo"].CurrentIndex = saved_settings.get("OpenAI_Model", DEFAULT_SETTINGS["OpenAI_Model"])
+    items["OpenAIVoiceCombo"].CurrentIndex= saved_settings.get("OpenAI_Voice", DEFAULT_SETTINGS["OpenAI_Voice"])
+    items["OpenAIPresetCombo"].CurrentIndex = saved_settings.get("OpenAI_Preset", DEFAULT_SETTINGS["OpenAI_Preset"])
+    items["OpenAIRateSpinBox"].Value = saved_settings.get("OpenAI_Rate", DEFAULT_SETTINGS["OpenAI_Rate"])
+    items["OpenAIFormatCombo"].CurrentIndex = saved_settings.get("OpenAI_Format", DEFAULT_SETTINGS["OpenAI_Format"])
+    items["OpenAIInstructionText"].Text = saved_settings.get("OpenAI_Instruction", DEFAULT_SETTINGS["OpenAI_Instruction"])
 
 def flagmark():
     global flag
@@ -2122,10 +2151,10 @@ def on_unuseapi_checkbox_clicked(ev):
     items["LanguageCombo"].Clear()
     if azure_items["UnuseAPICheckBox"].Checked:
         toggle_api_checkboxes(False)
-        voice_dict = edgeTTS_voices
+        voice_dict = EDGETTS_VOICES
     else:
         toggle_api_checkboxes(True)
-        voice_dict = azure_voices
+        voice_dict = AZURE_VOICES
     Language = [voice_dict[locale]['language'] for locale in voice_dict.keys()]
     for language in Language:
         items["LanguageCombo"].AddItem(language)
@@ -2163,7 +2192,7 @@ def on_name_combo_current_index_changed(ev):
     # 查找并更新风格选项
     found_voice = False
     valid_styles = False
-    for voice_locale, locale_data in azure_voices.items():
+    for voice_locale, locale_data in AZURE_VOICES.items():
         for voice_dict in locale_data["voices"]:
             if selected_voice in voice_dict:
                 found_voice = True
@@ -2176,7 +2205,7 @@ def on_name_combo_current_index_changed(ev):
                     items["StyleCombo"].Enabled = True  # 有有效风格时启用下拉菜单
                     for style in filtered_styles:
                         if items["LangCnCheckBox"].Checked:
-                            items["StyleCombo"].AddItem(StyleMapping.get(style, style))
+                            items["StyleCombo"].AddItem(AZURE_STYLE_MAP.get(style, style))
                         else:
                             items["StyleCombo"].AddItem(style)    
                 break  # 找到后终止循环
@@ -2841,14 +2870,14 @@ def delete_clone_voice(
     return filtered
 
 def on_delete_minimax_clone_voice(ev):
-    global minimax_clone_voices
+    global MINIMAX_CLONE_VOICES
     voice_name = items["minimaxVoiceCombo"].CurrentText.strip()
-    minimax_clone_voices = delete_clone_voice(
+    MINIMAX_CLONE_VOICES = delete_clone_voice(
             voice_file=voice_file,
             voice_name=voice_name,
             items=items,
-            minimax_clone_voices=minimax_clone_voices,
-            minimax_voices=minimax_voices,
+            minimax_clone_voices=MINIMAX_CLONE_VOICES,
+            minimax_voices=MINIMAX_VOICES,
         )
 win.On.minimaxDeleteVoice.Clicked = on_delete_minimax_clone_voice
 
@@ -2863,7 +2892,7 @@ def on_minimax_clone_confirm(ev):
         return
 
     
-    global minimax_clone_voices
+    global MINIMAX_CLONE_VOICES
     voice_name = minimax_clone_items["minimaxCloneVoiceName"].Text.strip()
     voice_id = minimax_clone_items["minimaxCloneVoiceID"].Text.strip()
     if not voice_name or not voice_id:
@@ -2883,9 +2912,9 @@ def on_minimax_clone_confirm(ev):
 
     # 3. Handle "Add ID Only" mode
     if minimax_clone_items["minimaxOnlyAddID"].Checked:
-        minimax_clone_voices = add_clone_voice(
+        MINIMAX_CLONE_VOICES = add_clone_voice(
             voice_file=voice_file, voice_name=voice_name, voice_id=voice_id, items=items,
-            minimax_clone_voices=minimax_clone_voices, minimax_voices=minimax_voices
+            minimax_clone_voices=MINIMAX_CLONE_VOICES, minimax_voices=MINIMAX_VOICES
         )
         return
 
@@ -2953,9 +2982,9 @@ def on_minimax_clone_confirm(ev):
                 f.write(demo_content)
             add_to_media_pool_and_timeline(current_timeline.GetStartFrame(), current_timeline.GetEndFrame(), demo_path)
 
-    minimax_clone_voices = add_clone_voice(
+    MINIMAX_CLONE_VOICES = add_clone_voice(
         voice_file=voice_file, voice_name=voice_name, voice_id=voice_id, items=items,
-        minimax_clone_voices=minimax_clone_voices, minimax_voices=minimax_voices
+        minimax_clone_voices=MINIMAX_CLONE_VOICES, minimax_voices=MINIMAX_VOICES
     )
     show_warning_message(STATUS_MESSAGES.clone_success)
 minimax_clone_window.On.MiniMaxCloneConfirm.Clicked = on_minimax_clone_confirm
@@ -3034,7 +3063,7 @@ def process_minimax_request(text_func, timeline_func):
 
     # 3. Get voice ID and other params
     voice_name = items["minimaxVoiceCombo"].CurrentText
-    all_voices = minimax_voices + minimax_clone_voices
+    all_voices = MINIMAX_VOICES + MINIMAX_CLONE_VOICES
     voice_id = next((v["voice_id"] for v in all_voices if v["voice_name"] == voice_name), None)
     if not voice_id:
         show_warning_message(STATUS_MESSAGES.synthesis_failed) # Or a more specific "voice not found" message
@@ -3042,8 +3071,9 @@ def process_minimax_request(text_func, timeline_func):
         return
 
     emotion_name = items["minimaxEmotionCombo"].CurrentText
-    emotion_value = next((en for cn, en in emotions if emotion_name in (cn, en)), "")
-
+    emotion_value = next((en for cn, en in MINIMAX_EMOTIONS if emotion_name in (cn, en)), "")
+    sound_effects_name = items["minimaxSoundEffectCombo"].CurrentText
+    sound_effects_value = next((en for cn, en in MINIMAX_SOUND_EFFECTS if sound_effects_name in (cn, en)), "")
     # 4. Call synthesis logic
     text = text_func()
     print_text_on_box(text)
@@ -3056,7 +3086,8 @@ def process_minimax_request(text_func, timeline_func):
         pitch=items["minimaxPitchSpinBox"].Value,
         file_format=items["minimaxFormatCombo"].CurrentText,
         subtitle_enable=items["minimaxSubtitleCheckBox"].Checked,
-        emotion=emotion_value
+        emotion=emotion_value,
+        sound_effects = sound_effects_value
     )
 
     # 5. Handle result
@@ -3151,16 +3182,16 @@ def on_minimax_reset_button_clicked(ev):
     """
     重置所有输入控件为默认设置。
     """
-    items["minimaxModelCombo"].CurrentIndex = default_settings["minimax_Model"]
-    items["minimaxVoiceCombo"].CurrentIndex = default_settings["minimax_Voice"]
-    items["minimaxLanguageCombo"].CurrentIndex = default_settings["minimax_Language"]
-    items["minimaxEmotionCombo"].CurrentIndex = default_settings["minimax_Emotion"]
-    items["minimaxRateSpinBox"].Value = default_settings["minimax_Rate"]
-    items["minimaxVolumeSpinBox"].Value = default_settings["minimax_Volume"]
-    items["minimaxPitchSpinBox"].Value = default_settings["minimax_Pitch"]
-    items["minimaxFormatCombo"].CurrentIndex=default_settings["minimax_Format"]
-    items["minimaxBreakSpinBox"].Value = default_settings["minimax_Break"]
-    items["minimaxSubtitleCheckBox"].Checked = default_settings["minimax_SubtitleCheckBox"]
+    items["minimaxModelCombo"].CurrentIndex = DEFAULT_SETTINGS["minimax_Model"]
+    items["minimaxVoiceCombo"].CurrentIndex = DEFAULT_SETTINGS["minimax_Voice"]
+    items["minimaxLanguageCombo"].CurrentIndex = DEFAULT_SETTINGS["minimax_Language"]
+    items["minimaxEmotionCombo"].CurrentIndex = DEFAULT_SETTINGS["minimax_Emotion"]
+    items["minimaxRateSpinBox"].Value = DEFAULT_SETTINGS["minimax_Rate"]
+    items["minimaxVolumeSpinBox"].Value = DEFAULT_SETTINGS["minimax_Volume"]
+    items["minimaxPitchSpinBox"].Value = DEFAULT_SETTINGS["minimax_Pitch"]
+    items["minimaxFormatCombo"].CurrentIndex=DEFAULT_SETTINGS["minimax_Format"]
+    items["minimaxBreakSpinBox"].Value = DEFAULT_SETTINGS["minimax_Break"]
+    items["minimaxSubtitleCheckBox"].Checked = DEFAULT_SETTINGS["minimax_SubtitleCheckBox"]
 win.On.minimaxResetButton.Clicked = on_minimax_reset_button_clicked
 
 def on_minimax_register_link_button_clicked(ev):
@@ -3262,12 +3293,12 @@ def on_openai_reset_button_clicked(ev):
     """
     重置所有输入控件为默认设置。
     """
-    items["OpenAIModelCombo"].CurrentIndex = default_settings["OpenAI_Model"]
-    items["OpenAIVoiceCombo"].CurrentIndex = default_settings["OpenAI_Voice"]
-    items["OpenAIRateSpinBox"].Value = default_settings["minimax_Rate"]
-    items["OpenAIFormatCombo"].CurrentIndex = default_settings["OpenAI_Format"]
-    items["OpenAIInstructionText"].Text = default_settings["OpenAI_Instruction"]
-    items["OpenAIPresetCombo"].CurrentIndex = default_settings["OpenAI_Preset"]
+    items["OpenAIModelCombo"].CurrentIndex = DEFAULT_SETTINGS["OpenAI_Model"]
+    items["OpenAIVoiceCombo"].CurrentIndex = DEFAULT_SETTINGS["OpenAI_Voice"]
+    items["OpenAIRateSpinBox"].Value = DEFAULT_SETTINGS["minimax_Rate"]
+    items["OpenAIFormatCombo"].CurrentIndex = DEFAULT_SETTINGS["OpenAI_Format"]
+    items["OpenAIInstructionText"].Text = DEFAULT_SETTINGS["OpenAI_Instruction"]
+    items["OpenAIPresetCombo"].CurrentIndex = DEFAULT_SETTINGS["OpenAI_Preset"]
 win.On.OpenAIResetButton.Clicked = on_openai_reset_button_clicked
 
 def on_openai_preview_button_clicked(ev):
@@ -3470,16 +3501,16 @@ win.On.AlphabetButton.Clicked = on_alphabet_button_clicked
 
 def on_reset_button_clicked(ev):
 
-    items["LanguageCombo"].CurrentIndex = default_settings["LANGUAGE"]
-    items["NameTypeCombo"].CurrentIndex = default_settings["TYPE"]
-    items["NameCombo"].CurrentIndex = default_settings["NAME"]
-    items["RateSpinBox"].Value = default_settings["RATE"]
-    items["BreakSpinBox"].Value = default_settings["BREAKTIME"]
-    items["PitchSpinBox"].Value = default_settings["PITCH"]
-    items["VolumeSpinBox"].Value = default_settings["VOLUME"]
-    items["StyleCombo"].CurrentIndex = default_settings["STYLE"]
-    items["StyleDegreeSpinBox"].Value = default_settings["STYLEDEGREE"]
-    items["OutputFormatCombo"].CurrentIndex = default_settings["OUTPUT_FORMATS"]
+    items["LanguageCombo"].CurrentIndex = DEFAULT_SETTINGS["LANGUAGE"]
+    items["NameTypeCombo"].CurrentIndex = DEFAULT_SETTINGS["TYPE"]
+    items["NameCombo"].CurrentIndex = DEFAULT_SETTINGS["NAME"]
+    items["RateSpinBox"].Value = DEFAULT_SETTINGS["RATE"]
+    items["BreakSpinBox"].Value = DEFAULT_SETTINGS["BREAKTIME"]
+    items["PitchSpinBox"].Value = DEFAULT_SETTINGS["PITCH"]
+    items["VolumeSpinBox"].Value = DEFAULT_SETTINGS["VOLUME"]
+    items["StyleCombo"].CurrentIndex = DEFAULT_SETTINGS["STYLE"]
+    items["StyleDegreeSpinBox"].Value = DEFAULT_SETTINGS["STYLEDEGREE"]
+    items["OutputFormatCombo"].CurrentIndex = DEFAULT_SETTINGS["OUTPUT_FORMATS"]
 win.On.ResetButton.Clicked = on_reset_button_clicked
 
 def on_aitranslator_button(ev):
