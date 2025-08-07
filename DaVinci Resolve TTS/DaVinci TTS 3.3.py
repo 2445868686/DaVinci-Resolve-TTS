@@ -286,6 +286,7 @@ def check_or_create_file(file_path):
                 json.dump({}, file)  
         except IOError:
             raise Exception(f"Cannot create file: {file_path}")
+        
 def load_resource(file_path: str) -> str:
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"{file_path} missing – check resources folder")
@@ -366,7 +367,7 @@ class MiniMaxProvider:
     def upload_file_for_clone(self, file_path: str) -> Dict[str, Any]:
         """Uploads a file for voice cloning."""
         print("Uploading...")
-        update_status(STATUS_MESSAGES.file_upload)
+        show_warning_message(STATUS_MESSAGES.file_upload)
         url = self._make_url("/v1/files/upload")
         self.session.headers.pop("Content-Type", None)
 
@@ -530,7 +531,7 @@ class AzureTTSProvider:
             return self._synthesize_edgetts(text, voice_name, rate, pitch, volume, filename, start_frame, end_frame)
 
     def _synthesize_azure(self, text, voice_name, rate, pitch, volume, style, style_degree, multilingual, audio_format, filename, start_frame, end_frame):
-        update_status(STATUS_MESSAGES.synthesizing)
+        show_warning_message(STATUS_MESSAGES.synthesizing)
         self.speech_config.set_speech_synthesis_output_format(audio_format)
         ssml = create_ssml(lang=lang, voice_name=voice_name, text=text, rate=rate, volume=volume, style=style, styledegree=style_degree, multilingual=multilingual, pitch=pitch)
         print(ssml)
@@ -549,12 +550,12 @@ class AzureTTSProvider:
             if cancellation_details.reason == speechsdk.CancellationReason.Error:
                 error_message += f" - Error details: {cancellation_details.error_details}"
             print(error_message)
-            update_status(STATUS_MESSAGES.synthesis_failed)
+            show_warning_message(STATUS_MESSAGES.synthesis_failed)
             return False, error_message
         return False, "Unknown Azure synthesis error."
 
     def _synthesize_edgetts(self, text, voice_name, rate, pitch, volume, filename, start_frame, end_frame):
-        update_status(STATUS_MESSAGES.synthesizing)
+        show_warning_message(STATUS_MESSAGES.synthesizing)
         prosody_rate = f"+{int((rate-1)*100)}%" if rate > 1 else f"-{int((1-rate)*100)}%"
         prosody_pitch = f"+{int((pitch-1)*100)}Hz" if pitch > 1 else f"-{int((1-pitch)*100)}Hz"
         prosody_volume = f"+{int((volume-1)*100)}%" if volume > 1 else f"-{int((1-volume)*100)}%"
@@ -566,12 +567,11 @@ class AzureTTSProvider:
             communicate.save_sync(filename)
             time.sleep(1)
             add_to_media_pool_and_timeline(start_frame, end_frame, filename)
-            update_status(STATUS_MESSAGES.loaded_to_timeline)
             return True, None
         except Exception as e:
             error_message = f"EdgeTTS synthesis failed: {e}"
             print(error_message)
-            update_status(STATUS_MESSAGES.synthesis_failed)
+            show_warning_message(STATUS_MESSAGES.synthesis_failed)
             return False, error_message
 
     def preview(self, text, voice_name, rate, pitch, volume, style, style_degree, multilingual, audio_format):
@@ -579,7 +579,7 @@ class AzureTTSProvider:
             show_warning_message(STATUS_MESSAGES.prev_txt) # Or some other appropriate message for EdgeTTS preview
             return False, "Preview is not supported for EdgeTTS in this implementation."
 
-        update_status(STATUS_MESSAGES.playing)
+        show_warning_message(STATUS_MESSAGES.playing)
         self.speech_config.set_speech_synthesis_output_format(audio_format)
         ssml = create_ssml(lang=lang, voice_name=voice_name, text=text, rate=rate, volume=volume, style=style, styledegree=style_degree, multilingual=multilingual, pitch=pitch)
         
@@ -588,7 +588,7 @@ class AzureTTSProvider:
         result = speech_synthesizer.speak_ssml_async(ssml).get()
         
         if result.reason == speechsdk.ResultReason.SynthesizingAudioCompleted:
-            update_status(STATUS_MESSAGES.reset_status)
+            show_warning_message(STATUS_MESSAGES.reset_status)
             return True, speechsdk.AudioDataStream(result)
         elif result.reason == speechsdk.ResultReason.Canceled:
             cancellation_details = result.cancellation_details
@@ -596,16 +596,17 @@ class AzureTTSProvider:
             if cancellation_details.reason == speechsdk.CancellationReason.Error:
                 error_message += f" - Error details: {cancellation_details.error_details}"
             print(error_message)
-            update_status(STATUS_MESSAGES.synthesis_failed)
+            show_warning_message(STATUS_MESSAGES.synthesis_failed)
             return False, error_message
         return False, "Unknown Azure preview error."
 
 config_dir = os.path.join(SCRIPT_PATH, 'config')
 settings_file = os.path.join(config_dir, 'TTS_settings.json')
-script_info_cn  = load_resource(os.path.join(config_dir, "script_info_cn.html"))
-script_info_en  = load_resource(os.path.join(config_dir, "script_info_en.html"))
-script_clone_info_cn = load_resource(os.path.join(config_dir, "script_clone_info_cn.html"))
-script_clone_info_en = load_resource(os.path.join(config_dir, "script_clone_info_en.html"))
+STATUS_FILE = os.path.join(config_dir, 'status.json')
+SCRIPT_INFO_CN  = load_resource(os.path.join(config_dir, "script_info_cn.html"))
+SCRIPT_INFO_EN  = load_resource(os.path.join(config_dir, "script_info_en.html"))
+MINIMAX_CLONE_INFO_CN = load_resource(os.path.join(config_dir, "script_clone_info_cn.html"))
+MINIMAX_CLONE_INFO_EN = load_resource(os.path.join(config_dir, "script_clone_info_en.html"))
 
 check_or_create_file(settings_file)
 
@@ -630,11 +631,11 @@ def save_settings(settings, settings_file):
 saved_settings = load_settings(settings_file) 
 
 
-status_file = os.path.join(config_dir, 'status.json')
+
 
 class STATUS_MESSAGES:
     pass
-with open(status_file, "r", encoding="utf-8") as file:
+with open(STATUS_FILE, "r", encoding="utf-8") as file:
     status_data = json.load(file)
 # 把 JSON 中的每一项都设置为 STATUS_MESSAGES 的类属性
 for key, (en, zh) in status_data.items():
@@ -727,11 +728,11 @@ def render_audio_by_marker(output_dir):
         "MarkOut": mark_out,
         "TargetDir": output_dir,
         "CustomName": filename,
-        "UniqueFilenameStyle": 1,   # 1 => 序号添加在后缀
+        "UniqueFilenameStyle": 1,   
         "ExportVideo": False,
         "ExportAudio": True,
         "AudioCodec": "LinearPCM",
-        "AudioBitDepth": 16,        # 32-bit 浮点数若不被支持, 可尝试改成 16 或 24
+        "AudioBitDepth": 16,        
         "AudioSampleRate": 48000,
     }
     minimax_clone_items["minimaxCloneStatus"].Text = "Start..."
@@ -741,10 +742,10 @@ def render_audio_by_marker(output_dir):
         print("错误: 渲染启动失败")
         return None
 
-    update_status(STATUS_MESSAGES.render_audio)
+    show_warning_message(STATUS_MESSAGES.render_audio)
     while current_project.IsRenderingInProgress(): # 
         print("Rendering...")
-        time.sleep(2)  # 每2秒检查一次，避免CPU占用过高
+        time.sleep(2)  
 
     print("Render complete!")
     clone_filename = f"{filename}.wav"
@@ -800,15 +801,15 @@ def add_to_media_pool_and_timeline(start_frame, end_frame, filename):
         "startFrame": 0,
         "endFrame": clip_duration_frames - 1,
         "trackIndex": track_index,
-        "recordFrame": start_frame,  # 在字幕的起始位置添加
-        "stereoEye": "both"  # 设置为立体声
+        "recordFrame": start_frame,  
+        "stereoEye": "both"  
     }
 
     # 将剪辑添加到时间线
     timeline_item = media_pool.AppendToTimeline([clip_info])
     if timeline_item:
         print(f"Appended clip: {selected_clip.GetName()} to timeline at frame {start_frame} on track {track_index}.")
-        update_status(STATUS_MESSAGES.loaded_to_timeline)
+        show_warning_message(STATUS_MESSAGES.loaded_to_timeline)
     else:
         print("Failed to append clip to timeline.")
 
@@ -834,7 +835,7 @@ def import_srt_to_timeline(srt_path):
     for ti in range(1, sub_count + 1):
         items = timeline.GetItemListInTrack("subtitle", ti)
         if items:
-            timeline.DeleteClips(items)  # 删除指定轨道上的片段&#8203;:contentReference[oaicite:6]{index=6}&#8203;:contentReference[oaicite:7]{index=7}
+            timeline.DeleteClips(items)  
 
     # 3. 导入 .srt 到媒体池
     media_pool = current_project.GetMediaPool()
@@ -848,14 +849,14 @@ def import_srt_to_timeline(srt_path):
             media_pool.DeleteClips([clip])
             break
 
-    imported = media_pool.ImportMedia([srt_path])  # 导入 .srt&#8203;:contentReference[oaicite:8]{index=8}&#8203;:contentReference[oaicite:9]{index=9}
+    imported = media_pool.ImportMedia([srt_path])  
     if not imported:
         print(f"错误：字幕文件导入失败 -> {srt_path}")
         return False
 
     # 4. 将导入的字幕追加到时间线
     new_clip = imported[0]
-    success = media_pool.AppendToTimeline([new_clip])  # 追加到时间线&#8203;:contentReference[oaicite:10]{index=10}&#8203;:contentReference[oaicite:11]{index=11}
+    success = media_pool.AppendToTimeline([new_clip])  
     if not success:
         print("错误：将字幕添加到时间线失败")
         return False
@@ -863,7 +864,25 @@ def import_srt_to_timeline(srt_path):
     print(f"字幕已成功加载到时间线: {file_name}")
     return True
 
-
+msgbox = dispatcher.AddWindow(
+        {
+            "ID": "MsgBox",
+            "WindowTitle": "Info",
+            "Geometry": [750, 400, 350, 100],
+            "Spacing": 10,
+        },
+        [
+            ui.VGroup(
+                [
+                    ui.Label({"ID": "InfoLabel", "Text": ""}),
+                    ui.HGroup(
+                        {"Weight": 0},
+                        [ui.Button({"ID": "OkButton", "Text": "OK"})],
+                    ),
+                ]
+            ),
+        ]
+    )
 
 win = dispatcher.AddWindow({
     "ID": "MainWin", 
@@ -881,9 +900,9 @@ win = dispatcher.AddWindow({
             ui.TabBar({"Weight": 0.0, "ID": "MyTabs"}), 
             ui.Stack({"Weight": 1.0, "ID": "MyStack"}, [
                 ui.VGroup({"ID": "Azure TTS", "Weight": 1}, [
-                    ui.HGroup({"Weight": 0.7}, [
-                        ui.VGroup({"Weight": 1}, [
-                            ui.TextEdit({"ID": "AzureTxt", "Text": "","PlaceholderText": "", "Weight": 0.9, "Font": ui.Font({"PixelSize": 15})}),
+                    ui.HGroup({"Weight": 1}, [
+                        ui.VGroup({"Weight": 0.7}, [
+                            ui.TextEdit({"ID": "AzureTxt", "Text": "","PlaceholderText": "", "Font": ui.Font({"PixelSize": 15}),"Weight": 0.9, }),
                             ui.HGroup({"Weight": 0.1}, [
                                 ui.Button({"ID": "GetSubButton", "Text": "从时间线获取字幕", "Weight": 0.7}),
                                 ui.SpinBox({"ID": "BreakSpinBox", "Value": 50, "Minimum": 0, "Maximum": 5000, "SingleStep": 50, "Weight": 0.1}),
@@ -949,9 +968,9 @@ win = dispatcher.AddWindow({
                     ])
                 ]),
                 ui.VGroup({"ID": "Minimax TTS", "Weight": 1}, [
-                    ui.HGroup({"Weight": 0.7}, [
+                    ui.HGroup({"Weight": 1}, [
                         ui.VGroup({"Weight": 0.7}, [
-                            ui.TextEdit({"ID": "minimaxText", "PlaceholderText": ""}),
+                            ui.TextEdit({"ID": "minimaxText", "PlaceholderText": "","Weight": 0.9, }),
                             ui.HGroup({"Weight": 0.1}, [
                                 ui.Button({"ID": "minimaxGetSubButton", "Text": "从时间线获取字幕", "Weight": 0.7}),
                                 ui.SpinBox({"ID": "minimaxBreakSpinBox", "Value": 50, "Minimum": 1, "Maximum": 9999, "SingleStep": 50, "Weight": 0.1}),
@@ -961,14 +980,16 @@ win = dispatcher.AddWindow({
                         ]),
                         ui.VGroup({"Weight": 1}, [
                             ui.HGroup({}, [
-                                ui.Label({"ID": "minimaxModelLabel","Text": "模型:", "Weight": 0}),
-                                ui.ComboBox({"ID": "minimaxModelCombo", "Text": "选择模型"}),
-                                ui.Label({"ID": "minimaxLanguageLabel","Text": "语言:", "Weight": 0}),
-                                ui.ComboBox({"ID": "minimaxLanguageCombo", "Text": "选择语言"})
+                                ui.Label({"ID": "minimaxModelLabel","Text": "模型:", "Weight": 0.2}),
+                                ui.ComboBox({"ID": "minimaxModelCombo", "Text": "选择模型", "Weight": 0.8}),
                             ]),
                             ui.HGroup({}, [
-                                ui.Label({"ID": "minimaxVoiceLabel","Text": "音色:", "Weight": 0}),
-                                ui.ComboBox({"ID": "minimaxVoiceCombo", "Text": "选择人声","Weight": 1}),
+                                ui.Label({"ID": "minimaxLanguageLabel","Text": "语言:", "Weight": 0.2}),
+                                ui.ComboBox({"ID": "minimaxLanguageCombo", "Text": "选择语言", "Weight": 0.8})
+                            ]),
+                            ui.HGroup({}, [
+                                ui.Label({"ID": "minimaxVoiceLabel","Text": "音色:", "Weight": 0.2}),
+                                ui.ComboBox({"ID": "minimaxVoiceCombo", "Text": "选择人声","Weight": 0.8}),
                             ]),
                             ui.HGroup({}, [
                                 ui.Button({"ID": "minimaxPreviewButton", "Text": "试听","Weight": 0.1}),
@@ -976,13 +997,13 @@ win = dispatcher.AddWindow({
                                 ui.Button({"ID": "minimaxDeleteVoice", "Text": "","Weight": 0.1}),
                             ]),
                             ui.HGroup({}, [
-                                ui.Label({"ID": "minimaxSoundEffectLabel","Text": "音效:", "Weight": 0}),
-                                ui.ComboBox({"ID": "minimaxSoundEffectCombo", "Text": "选择情绪"}),
+                                ui.Label({"ID": "minimaxSoundEffectLabel","Text": "音效:", "Weight": 0.2}),
+                                ui.ComboBox({"ID": "minimaxSoundEffectCombo", "Text": "", "Weight": 0.8}),
                                 
                             ]),
                             ui.HGroup({}, [
-                                ui.Label({"ID": "minimaxEmotionLabel","Text": "情绪:", "Weight": 0}),
-                                ui.ComboBox({"ID": "minimaxEmotionCombo", "Text": "选择情绪"}),                   
+                                ui.Label({"ID": "minimaxEmotionLabel","Text": "情绪:", "Weight": 0.2}),
+                                ui.ComboBox({"ID": "minimaxEmotionCombo", "Text": "", "Weight": 0.8}),                   
                             ]),
                             ui.HGroup({}, [
                                 ui.Label({"ID": "minimaxRateLabel","Text": "速度:", "Weight": 0.2}),
@@ -1000,9 +1021,9 @@ win = dispatcher.AddWindow({
                                 ui.SpinBox({"ID": "minimaxPitchSpinBox", "Minimum": -12, "Maximum": 12, "Value": 0, "SingleStep": 1, "Weight": 0.2})
                             ]),
                             ui.HGroup({}, [
-                                ui.Label({"ID": "minimaxFormatLabel","Text": "格式:", "Weight": 0}),
-                                ui.ComboBox({"ID": "minimaxFormatCombo", "Text": "选择格式"}),
-                                ui.CheckBox({"ID": "minimaxSubtitleCheckBox", "Text": "生成字幕", "Checked": False, "Alignment": {"AlignLeft": True}, "Weight": 0.1}),
+                                ui.Label({"ID": "minimaxFormatLabel","Text": "格式:", "Weight": 0.2}),
+                                ui.ComboBox({"ID": "minimaxFormatCombo", "Text": "选择格式", "Weight": 0.6}),
+                                ui.CheckBox({"ID": "minimaxSubtitleCheckBox", "Text": "生成字幕", "Checked": False, "Alignment": {"AlignLeft": True}, "Weight": 0.2}),
                             ]),
                             ui.HGroup({}, [
                                 ui.Button({"ID": "minimaxFromSubButton", "Text": "朗读当前字幕"}),
@@ -1016,28 +1037,30 @@ win = dispatcher.AddWindow({
                     ])
                 ]),
                 ui.VGroup({"ID": "OpenAI TTS", "Weight": 1}, [
-                    ui.HGroup({"Weight": 0.7}, [
-                        ui.VGroup({"Weight": 0.5}, [
-                            ui.TextEdit({"ID": "OpenAIText", "PlaceholderText": ""}),
+                    ui.HGroup({"Weight": 1}, [
+                        ui.VGroup({"Weight": 0.7}, [
+                            ui.TextEdit({"ID": "OpenAIText", "PlaceholderText": "","Weight": 0.9, }),
                             ui.HGroup({"Weight": 0.1}, [
                                 ui.Button({"ID": "OpenAIGetSubButton", "Text": "从时间线获取字幕", "Weight": 0.7}),
                             ])
                         ]),
-                        ui.VGroup({"Weight": 0.5}, [
+                        ui.VGroup({"Weight": 1}, [
                             ui.HGroup({}, [
-                                ui.Label({"ID": "OpenAIModelLabel","Text": "模型:", "Weight": 0}),
-                                ui.ComboBox({"ID": "OpenAIModelCombo", "Text": "选择模型"}),
+                                ui.Label({"ID": "OpenAIModelLabel","Text": "模型:", "Weight": 0.2}),
+                                ui.ComboBox({"ID": "OpenAIModelCombo", "Text": "选择模型", "Weight": 0.8}),
                             ]),
                             ui.HGroup({}, [
-                                ui.Label({"ID": "OpenAIVoiceLabel","Text": "音色:", "Weight": 0}),
-                                ui.ComboBox({"ID": "OpenAIVoiceCombo", "Text": "选择人声"}),
-                                ui.Label({"ID": "OpenAIPresetLabel","Text": "预设:", "Weight": 0}),
-                                ui.ComboBox({"ID": "OpenAIPresetCombo", "Text": "预设"}),
-                                ui.Button({"ID": "OpenAIPreviewButton", "Text": "试听"})
+                                ui.Label({"ID": "OpenAIVoiceLabel","Text": "音色:", "Weight": 0.2}),
+                                ui.ComboBox({"ID": "OpenAIVoiceCombo", "Text": "选择人声", "Weight": 0.6}),
+                                ui.Button({"ID": "OpenAIPreviewButton", "Text": "试听", "Weight": 0.2})
                             ]),
                             ui.HGroup({}, [
-                                ui.Label({"ID": "OpenAIInstructionLabel","Text": "指令:", "Weight": 0}),
-                                ui.TextEdit({"ID": "OpenAIInstructionText", "PlaceholderText": ""}),
+                                ui.Label({"ID": "OpenAIPresetLabel","Text": "预设:", "Weight": 0.2}),
+                                ui.ComboBox({"ID": "OpenAIPresetCombo", "Text": "预设", "Weight": 0.8}),
+                            ]),
+                            ui.HGroup({}, [
+                                ui.Label({"ID": "OpenAIInstructionLabel","Text": "指令:", "Weight": 0.2}),
+                                ui.TextEdit({"ID": "OpenAIInstructionText", "PlaceholderText": "", "Weight": 0.8}),
                             ]),
                             ui.HGroup({}, [
                                 ui.Label({"ID": "OpenAIRateLabel","Text": "速度:", "Weight": 0.2}),
@@ -1045,8 +1068,8 @@ win = dispatcher.AddWindow({
                                 ui.DoubleSpinBox({"ID": "OpenAIRateSpinBox", "Minimum": 0.25, "Maximum": 4.00, "Value": 1.00, "SingleStep": 0.01, "Decimals": 2, "Weight": 0.2})
                             ]),
                             ui.HGroup({}, [
-                                ui.Label({"ID": "OpenAIFormatLabel","Text": "格式:", "Weight": 0}),
-                                ui.ComboBox({"ID": "OpenAIFormatCombo", "Text": "选择格式"}),
+                                ui.Label({"ID": "OpenAIFormatLabel","Text": "格式:", "Weight": 0.2}),
+                                ui.ComboBox({"ID": "OpenAIFormatCombo", "Text": "选择格式", "Weight": 0.8}),
                             ]),
                             ui.HGroup({}, [
                                 ui.Button({"ID": "OpenAIFromSubButton", "Text": "朗读当前字幕"}),
@@ -1054,7 +1077,7 @@ win = dispatcher.AddWindow({
                                 ui.Button({"ID": "OpenAIResetButton", "Text": "重置"})
                             ]),
                             ui.HGroup({}, [
-                                ui.Label({"ID": "OpenAIStatusLabel", "Text": " ", "Alignment": {"AlignHCenter": True, "AlignVCenter": True}})
+                                ui.Label({"ID": "OpenAIStatusLabel", "Text": " ", "Alignment": {"AlignHCenter": True, "AlignVCenter": True,"Weight": 1}})
                             ])
                         ])
                     ])
@@ -1274,7 +1297,7 @@ minimax_clone_window = dispatcher.AddWindow(
                 ui.VGroup( {"Weight": 1, "Spacing": 10},
                     [
                         ui.HGroup({"Weight": 1}, [
-                            ui.TextEdit({"ID": "minimaxcloneinfoTxt", "Text": script_clone_info_cn, "ReadOnly": True, "Font": ui.Font({"PixelSize": 14})})
+                            ui.TextEdit({"ID": "minimaxcloneinfoTxt", "Text": MINIMAX_CLONE_INFO_CN, "ReadOnly": True, "Font": ui.Font({"PixelSize": 14})})
                         ])
                     ]
                 ),
@@ -1349,7 +1372,7 @@ translations = {
         "ShowMiniMaxClone": "克隆",
         "minimaxDeleteVoice":"删除",
         "CopyrightButton":f"关注公众号：游艺所\n\n>>>点击查看更多信息<<<\n\n© 2025, Copyright by {SCRIPT_AUTHOR}.",
-        "infoTxt":script_info_cn,
+        "infoTxt":SCRIPT_INFO_CN,
         "AzureLabel":"填写Azure API信息",
         "RegionLabel":"区域",
         "ApiKeyLabel":"密钥",
@@ -1370,7 +1393,7 @@ translations = {
         "minimaxNeedNoiseReduction":"开启降噪",
         "minimaxNeedVolumeNormalization":"音量统一",
         "minimaxClonePreviewLabel":"输入试听文本(限制300字以内)：",
-        "minimaxcloneinfoTxt":script_clone_info_cn,
+        "minimaxcloneinfoTxt":MINIMAX_CLONE_INFO_CN,
         "minimaxApiKeyLabel":"密钥",
         "intlCheckBox": "海外",
         "MiniMaxConfirm":"确定",
@@ -1440,7 +1463,7 @@ translations = {
         "ShowMiniMaxClone": "Clone",
         "minimaxDeleteVoice":"Delete",
         "CopyrightButton":f"😊Buy Me A Coffe😊\n\n© 2025, Copyright by {SCRIPT_AUTHOR}.",
-        "infoTxt":script_info_en,
+        "infoTxt":SCRIPT_INFO_EN,
         "AzureLabel":"Azure API",
         "RegionLabel":"Region",
         "ApiKeyLabel":"Key",
@@ -1463,7 +1486,7 @@ translations = {
         "minimaxNeedVolumeNormalization":"Volume Normalization",
         "minimaxClonePreviewLabel":"Input text for cloned voice preview:\n(Limited to 2000 characters. )",
         "minimaxApiKeyLabel":"Key",
-        "minimaxcloneinfoTxt":script_clone_info_en,
+        "minimaxcloneinfoTxt":MINIMAX_CLONE_INFO_EN,
         "intlCheckBox": "intl",
         "MiniMaxConfirm":"OK",
         "MiniMaxCloneConfirm":"Add",
@@ -1481,8 +1504,18 @@ azure_items = azure_config_window.GetItems()
 minimax_items = minimax_config_window.GetItems()
 openai_items = openai_config_window.GetItems()
 minimax_clone_items = minimax_clone_window.GetItems()
-items["StatusLabel"].Text = ""
+msgbox_items = msgbox.GetItems()
 items["MyStack"].CurrentIndex = 0
+
+def show_warning_message(status_tuple):
+    use_english = items["LangEnCheckBox"].Checked
+    message = status_tuple[0] if use_english else status_tuple[1]
+    msgbox_items["InfoLabel"].Text = message
+    msgbox.Show()
+
+def on_msg_ok_clicked(ev):
+    msgbox.Hide()   
+msgbox.On.OkButton.Clicked = on_msg_ok_clicked
 
 for tab_name in translations["cn"]["Tabs"]:
     items["MyTabs"].AddTab(tab_name)
@@ -1515,42 +1548,8 @@ style_degree = None
 stream = None
 minimax_voice_index_initialized = False
 
-def show_warning_message(status_tuple):
-    use_english = items["LangEnCheckBox"].Checked
-    # 元组索引 0 为英文，1 为中文
-    message = status_tuple[0] if use_english else status_tuple[1]
-    msgbox = dispatcher.AddWindow(
-        {
-            "ID": 'msg',
-            "WindowTitle": 'Warning',
-            "Geometry": [750, 400, 350, 100],
-            "Spacing": 10,
-        },
-        [
-            ui.VGroup(
-                [
-                    ui.Label({"ID": 'WarningLabel', "Text": message}),
-                    ui.HGroup(
-                        {
-                            "Weight": 0,
-                        },
-                        [
-                            ui.Button({"ID": 'OkButton', "Text": 'OK'}),
-                        ]
-                    ),
-                ]
-            ),
-        ]
-    )
 
-    def on_ok_button_clicked(ev):
-        dispatcher.ExitLoop()
-    msgbox.On.OkButton.Clicked = on_ok_button_clicked
 
-    msgbox.Show()
-    dispatcher.RunLoop()
-    msgbox.Hide()
-    
 # 加载Voice
 voice_file = os.path.join(config_dir, 'voices_list.json')
 if not os.path.exists(voice_file):
@@ -1564,15 +1563,16 @@ OPENAI_VOICES = voices_data.get("openai_voice", {}).get("voices", [])
 MINIMAX_VOICES = voices_data.get("minimax_system_voice", [])
 MINIMAX_CLONE_VOICES = voices_data.get("minimax_clone_voices", [])
 
-preset_file = os.path.join(config_dir, 'instruction.json')
-if not os.path.exists(preset_file):
+OPENAI_PRESET_FILE = os.path.join(config_dir, 'instruction.json')
+
+if not os.path.exists(OPENAI_PRESET_FILE):
     preset_data = {
         "Custom": {
             "Description": ""
         }
     }
 else:
-    with open(preset_file, "r", encoding="utf-8") as file:
+    with open(OPENAI_PRESET_FILE, "r", encoding="utf-8") as file:
         preset_data = json.load(file)
 
 for preset_name in preset_data:
@@ -2344,19 +2344,6 @@ def print_srt(subtitles, framerate):
         end_time = frame_to_timecode(subtitle['end'], framerate)
         print(f"{index + 1}\n{start_time} --> {end_time}\n{subtitle['text']}\n")
 
-def update_status(status_tuple):
-    """
-    更新状态信息：
-    如果 items["LangEnCheckBox"].Checked 为 True，则选择英文，
-    否则选择中文。
-    """
-    use_english = items["LangEnCheckBox"].Checked
-    # 元组索引 0 为英文，1 为中文
-    message = status_tuple[0] if use_english else status_tuple[1]
-    items["StatusLabel"].Text = message
-    items["minimaxStatusLabel"].Text = message
-    items["OpenAIStatusLabel"].Text = message
-    minimax_clone_items["minimaxCloneStatus"].Text = message
 
 def print_text_on_box(text):
     items['AzureTxt'].PlainText = text
@@ -2554,7 +2541,6 @@ def on_fromsub_button_clicked(ev):
         )
     except ValueError as e:
         show_warning_message(STATUS_MESSAGES.enter_api_key)
-        update_status(STATUS_MESSAGES.synthesis_failed)
         return
 
     global subtitle, stream, flag
@@ -2600,7 +2586,6 @@ def on_fromtxt_button_clicked(ev):
         )
     except ValueError as e:
         show_warning_message(STATUS_MESSAGES.enter_api_key)
-        update_status(STATUS_MESSAGES.synthesis_failed)
         return
 
     global subtitle, stream, flag
@@ -2638,7 +2623,8 @@ def on_fromtxt_button_clicked(ev):
         if success:
             flag = False
     else:
-        update_status(STATUS_MESSAGES.media_clip_exists)
+        
+        show_warning_message(STATUS_MESSAGES.media_clip_exists)
 win.On.FromTxtButton.Clicked = on_fromtxt_button_clicked
 
 def on_play_button_clicked(ev):
@@ -2677,7 +2663,7 @@ def on_play_button_clicked(ev):
         show_warning_message(STATUS_MESSAGES.unsupported_audio)
         items["PlayButton"].Enabled = True
         return
-
+    
     success, result = provider.preview(subtitle, voice_name, rate, pitch, volume, style, style_degree, multilingual, audio_format)
     
     if success:
@@ -2921,15 +2907,14 @@ def on_minimax_clone_confirm(ev):
     # 4. Full clone process: Get File ID -> Submit -> Download
     file_id_text = minimax_clone_items["minimaxCloneFileID"].Text.strip()
     if not file_id_text:
-        update_status(STATUS_MESSAGES.file_upload)
+        show_warning_message(STATUS_MESSAGES.file_upload)
         audio_path = render_audio_by_marker(AUDIO_TEMP_DIR)
         if not audio_path:
-            update_status(STATUS_MESSAGES.render_audio_failed)
+            show_warning_message(STATUS_MESSAGES.render_audio_failed)
             return
         resolve.OpenPage("edit")
         if os.path.exists(audio_path) and os.path.getsize(audio_path) > 20 * 1024 * 1024:
             show_warning_message(STATUS_MESSAGES.file_size)
-            update_status(STATUS_MESSAGES.synthesis_failed)
             return
 
         upload_result = provider.upload_file_for_clone(audio_path)
@@ -2942,7 +2927,6 @@ def on_minimax_clone_confirm(ev):
                     STATUS_MESSAGES.error_1000
                 )
             show_warning_message(status_tuple)
-            update_status(status_tuple)
             return
         
         file_id = upload_result["file_id"]
@@ -2951,7 +2935,7 @@ def on_minimax_clone_confirm(ev):
         file_id = int(file_id_text)
 
     # 5. Submit clone job
-    update_status(STATUS_MESSAGES.file_clone)
+    show_warning_message(STATUS_MESSAGES.file_clone)
     clone_result = provider.submit_clone_job(
         file_id=file_id, voice_id=voice_id,
         need_nr=minimax_clone_items["minimaxNeedNoiseReduction"].Checked,
@@ -2968,13 +2952,12 @@ def on_minimax_clone_confirm(ev):
                 STATUS_MESSAGES.error_1000
             )
         show_warning_message(status_tuple)
-        update_status(status_tuple)
         #minimax_clone_items["minimaxCloneStatus"].Text = f"ERROR: {clone_result['error_message']}"
         return
 
     # 6. Download demo and update lists
     if clone_result["demo_url"]:
-        update_status(STATUS_MESSAGES.download_preclone)
+        show_warning_message(STATUS_MESSAGES.download_preclone)
         demo_content = provider.download_media(clone_result["demo_url"])
         if demo_content:
             demo_path = os.path.join(items["Path"].Text, f"preview_{voice_id}.mp3")
@@ -3038,16 +3021,14 @@ def process_minimax_request(text_func, timeline_func):
 
     if not save_path:
         show_warning_message(STATUS_MESSAGES.select_save_path)
-        update_status(STATUS_MESSAGES.synthesis_failed)
         return
 
     if not api_key or not group_id:
         show_warning_message(STATUS_MESSAGES.enter_api_key)
-        update_status(STATUS_MESSAGES.synthesis_failed)
         return
 
 
-    update_status(STATUS_MESSAGES.synthesizing)
+    #show_warning_message(STATUS_MESSAGES.synthesizing)
 
     # 2. Initialize Provider
     try:
@@ -3058,7 +3039,7 @@ def process_minimax_request(text_func, timeline_func):
         )
     except ValueError as e:
         print(e)
-        update_status(STATUS_MESSAGES.synthesis_failed)
+        show_warning_message(STATUS_MESSAGES.synthesis_failed)
         return
 
     # 3. Get voice ID and other params
@@ -3100,7 +3081,6 @@ def process_minimax_request(text_func, timeline_func):
                 STATUS_MESSAGES.error_1000
             )
         show_warning_message(status_tuple)
-        update_status(status_tuple)
         return
 
     # Save audio
@@ -3112,7 +3092,7 @@ def process_minimax_request(text_func, timeline_func):
         add_to_media_pool_and_timeline(start_frame, end_frame, filename)
     except IOError as e:
         print(f"Failed to write audio file: {e}")
-        update_status(STATUS_MESSAGES.audio_save_failed)
+        show_warning_message(STATUS_MESSAGES.audio_save_failed)
         return
 
     # Handle subtitles
@@ -3134,7 +3114,7 @@ def process_minimax_request(text_func, timeline_func):
             except (IOError, json.JSONDecodeError) as e:
                 print(f"Failed to process subtitle file: {e}")
     
-    update_status(STATUS_MESSAGES.loaded_to_timeline)
+    show_warning_message(STATUS_MESSAGES.loaded_to_timeline)
 
 def on_minimax_fromsub_button_clicked(ev):
     resolve, current_project,current_timeline = connect_resolve()
@@ -3216,17 +3196,16 @@ def process_openai_request(text_func, timeline_func):
     api_key = openai_items["OpenAIApiKey"].Text
     if not save_path or not api_key:
         show_warning_message(STATUS_MESSAGES.select_save_path if not save_path else STATUS_MESSAGES.enter_api_key)
-        update_status(STATUS_MESSAGES.synthesis_failed)
         return
 
-    update_status(STATUS_MESSAGES.synthesizing)
+    #show_warning_message(STATUS_MESSAGES.synthesizing)
 
     # 2. Initialize Provider
     try:
         provider = OpenAIProvider(api_key, openai_items["OpenAIBaseURL"].Text)
     except ValueError as e:
         print(e)
-        update_status(STATUS_MESSAGES.synthesis_failed)
+        show_warning_message(STATUS_MESSAGES.synthesis_failed)
         return
 
     # 3. Call synthesis logic
@@ -3250,12 +3229,11 @@ def process_openai_request(text_func, timeline_func):
             
             start_frame, end_frame = timeline_func()
             add_to_media_pool_and_timeline(start_frame, end_frame, filename)
-            update_status(STATUS_MESSAGES.loaded_to_timeline)
         except IOError as e:
             print(f"Failed to write audio file: {e}")
-            update_status(STATUS_MESSAGES.audio_save_failed)
+            show_warning_message(STATUS_MESSAGES.audio_save_failed)
     else:
-        update_status(STATUS_MESSAGES.synthesis_failed)
+        show_warning_message(STATUS_MESSAGES.synthesis_failed)
 
 def on_openai_fromsub_button_clicked(ev):
     resolve, current_project,current_timeline = connect_resolve()
@@ -3528,6 +3506,11 @@ def on_whisper_button(ev):
 win.On.WhisperButton.Clicked = on_whisper_button
 
 def on_close(ev):
+    resolve, current_project,current_timeline = connect_resolve()
+    markers = current_timeline.GetMarkers() or {}
+    for frame_id, info in markers.items():
+        if info.get("customData") == "clone":
+            current_timeline.DeleteMarkerAtFrame(frame_id)
     close_and_save(settings_file)
     import shutil
     for temp_dir in [AUDIO_TEMP_DIR]:
