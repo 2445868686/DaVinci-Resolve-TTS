@@ -12,8 +12,57 @@ SCRIPT_NAME="DaVinci TTS"
 
 WHEEL_DIR="/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/HB/$SCRIPT_NAME/wheel"
 TARGET_DIR="/Library/Application Support/Blackmagic Design/DaVinci Resolve/Fusion/HB/$SCRIPT_NAME/Lib"
-PACKAGES=(requests azure-cognitiveservices-speech edge-tts pypinyin)
+PACKAGES=(
+  "requests" 
+  "azure-cognitiveservices-speech" 
+  "edge-tts" 
+  "pypinyin"
+)
+
+# 官方与镜像 PyPI
+PIP_OFFICIAL="https://pypi.org/simple"
 PIP_MIRROR="https://pypi.tuna.tsinghua.edu.cn/simple"
+
+# ———————— 区域识别（是否为中国大陆） ————————
+read_user_default() {
+  local key="$1"
+  local val=""
+  if [[ -n "${SUDO_USER-}" ]]; then
+    val=$(sudo -u "$SUDO_USER" defaults read -g "$key" 2>/dev/null || true)
+  else
+    val=$(defaults read -g "$key" 2>/dev/null || true)
+  fi
+  echo "$val"
+}
+
+is_china_region() {
+  local locale langs tz country
+  locale="$(read_user_default AppleLocale)"
+  langs="$(read_user_default AppleLanguages)"
+  if [[ "$locale" == *"zh_CN"* || "$locale" == *"Hans_CN"* ]]; then
+    return 0
+  fi
+  if [[ "$langs" == *"zh-Hans"* || "$langs" == *"zh_CN"* ]]; then
+    return 0
+  fi
+  if command -v systemsetup >/dev/null 2>&1; then
+    tz="$(systemsetup -gettimezone 2>/dev/null | awk -F': ' '{print $2}')"
+    if [[ "$tz" == "Asia/Shanghai" || "$tz" == "Asia/Urumqi" ]]; then
+      return 0
+    fi
+  fi
+  if command -v curl >/dev/null 2>&1; then
+    country="$(
+      curl -m 2 -s https://ipinfo.io/country 2>/dev/null || \
+      curl -m 2 -s https://ifconfig.co/country-iso 2>/dev/null || true
+    )"
+    country="${country//[$'\r\n\t ']}"
+    if [[ "$country" == "CN" ]]; then
+      return 0
+    fi
+  fi
+  return 1
+}
 
 # ———————— 日志函数 ————————
 # 用法：log LEVEL "message"
@@ -37,27 +86,34 @@ log INFO "Clearing pip cache..."
 $PYTHON -m pip cache purge >/dev/null 2>&1 || log WARN "pip cache purge failed or already empty."
 
 # ———————— 步骤 3：下载最新版本的包及依赖 ————————
-log INFO "Attempting download from official PyPI..."
+PRIMARY_INDEX="$PIP_OFFICIAL"; SECONDARY_INDEX="$PIP_MIRROR"
+if is_china_region; then
+  PRIMARY_INDEX="$PIP_MIRROR"; SECONDARY_INDEX="$PIP_OFFICIAL"
+  log INFO "Region CN detected. Using mirror first: $PRIMARY_INDEX"
+else
+  log INFO "Region not CN. Using official first: $PRIMARY_INDEX"
+fi
+
 if $PYTHON -m pip download "${PACKAGES[@]}" \
     --dest "$WHEEL_DIR" \
     --only-binary=:all: \
     --use-feature=fast-deps \
     --no-cache-dir \
     --progress-bar=on \
-    -i https://pypi.org/simple; then
-  log SUCCESS "Download succeeded using official PyPI."
+    -i "$PRIMARY_INDEX"; then
+  log SUCCESS "Download succeeded using primary index."
 else
-  log WARN "Official PyPI failed. Trying TUNA mirror..."
+  log WARN "Primary index failed. Trying secondary: $SECONDARY_INDEX ..."
   if $PYTHON -m pip download "${PACKAGES[@]}" \
       --dest "$WHEEL_DIR" \
       --only-binary=:all: \
       --use-feature=fast-deps \
       --no-cache-dir \
       --progress-bar=on \
-      -i "$PIP_MIRROR"; then
-    log SUCCESS "Download succeeded using TUNA mirror."
+      -i "$SECONDARY_INDEX"; then
+    log SUCCESS "Download succeeded using secondary index."
   else
-    log ERROR "Download failed from both official and TUNA mirror. Please check your network."
+    log ERROR "Download failed from both indexes. Please check your network."
     exit 1
   fi
 fi

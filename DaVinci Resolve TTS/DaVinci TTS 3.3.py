@@ -160,6 +160,7 @@ import re
 import time
 import wave
 import json
+import threading
 import webbrowser
 from xml.dom import minidom
 import xml.etree.ElementTree as ET
@@ -191,6 +192,24 @@ loading_win = dispatcher.AddWindow(
     ]
 )
 loading_win.Show()
+
+# ===== Loading label elapsed-time updater =====
+_loading_items = loading_win.GetItems()
+_loading_start_ts = time.time()
+_loading_timer_stop = False
+
+def _loading_timer_worker():
+    # Update once per second until stopped
+    while not _loading_timer_stop:
+        try:
+            elapsed = int(time.time() - _loading_start_ts)
+            _loading_items["LoadLabel"].Text = f"Please wait , loading... \n( {elapsed}s elapsed )"
+        except Exception:
+            pass
+        time.sleep(1.0)
+
+_loading_timer_thread = threading.Thread(target=_loading_timer_worker, daemon=True)
+_loading_timer_thread.start()
 
 # ================== DaVinci Resolve 接入 ==================
 try:
@@ -874,7 +893,7 @@ msgbox = dispatcher.AddWindow(
         [
             ui.VGroup(
                 [
-                    ui.Label({"ID": "InfoLabel", "Text": ""}),
+                    ui.Label({"ID": "InfoLabel", "Text": "",'Alignment': { 'AlignCenter' : True },'WordWrap': True}),
                     ui.HGroup(
                         {"Weight": 0},
                         [ui.Button({"ID": "OkButton", "Text": "OK"})],

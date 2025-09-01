@@ -9,8 +9,9 @@ set "WHEEL_DIR=C:\ProgramData\Blackmagic Design\DaVinci Resolve\Fusion\HB\%SCRIP
 set "TARGET_DIR=C:\ProgramData\Blackmagic Design\DaVinci Resolve\Fusion\HB\%SCRIPT_NAME%\Lib"
 rem All required packages
 set "PACKAGES=requests azure-cognitiveservices-speech edge-tts pypinyin"
-rem Tsinghua mirror for faster downloads (remove if not needed)
-set "PIP_MIRROR=-i https://pypi.tuna.tsinghua.edu.cn/simple"
+rem Official and mirror indexes
+set "PIP_OFFICIAL=https://pypi.org/simple"
+set "PIP_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple"
 rem =============================================
 
 echo.
@@ -29,23 +30,34 @@ rem 2. Clear pip cache to avoid potential corruption
 echo [%DATE% %TIME%] Clearing pip cache
 python -m pip cache purge --disable-pip-version-check
 
-rem 3. Try download from official PyPI first
+rem 3. Region detection (timezone). Use mirror first if China Standard Time
+set "PRIMARY_INDEX=%PIP_OFFICIAL%"
+set "SECONDARY_INDEX=%PIP_MIRROR%"
+for /f "delims=" %%A in ('2^>nul tzutil /g') do set "TZ_NAME=%%A"
+if /I "!TZ_NAME!"=="China Standard Time" (
+    set "PRIMARY_INDEX=%PIP_MIRROR%"
+    set "SECONDARY_INDEX=%PIP_OFFICIAL%"
+    echo [%DATE% %TIME%] Region CN detected by timezone. Using mirror first: !PRIMARY_INDEX!
+) else (
+    echo [%DATE% %TIME%] Region not CN by timezone. Using official first: !PRIMARY_INDEX!
+)
+
 echo.
-echo [%DATE% %TIME%] Attempting to download from official PyPI...
+echo [%DATE% %TIME%] Attempting to download from: !PRIMARY_INDEX!
 python -m pip download %PACKAGES% --dest "%WHEEL_DIR%" --only-binary=:all: ^
-    --use-feature=fast-deps --no-cache-dir -i https://pypi.org/simple
+    --use-feature=fast-deps --no-cache-dir -i "!PRIMARY_INDEX!"
 if errorlevel 1 (
-    echo [%DATE% %TIME%] WARNING: Failed to download from official PyPI. Trying TUNA mirror...
+    echo [%DATE% %TIME%] WARNING: Primary index failed. Trying secondary: !SECONDARY_INDEX!
     python -m pip download %PACKAGES% --dest "%WHEEL_DIR%" --only-binary=:all: ^
-        --use-feature=fast-deps --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple
+        --use-feature=fast-deps --no-cache-dir -i "!SECONDARY_INDEX!"
     if errorlevel 1 (
-        echo [%DATE% %TIME%] ERROR: Failed to download packages from both sources. Check your network or package names.
+        echo [%DATE% %TIME%] ERROR: Failed to download packages from both indexes. Check your network or package names.
         pause & exit /b 1
     ) else (
-        echo [%DATE% %TIME%] SUCCESS: Packages downloaded via TUNA mirror to "%WHEEL_DIR%"
+        echo [%DATE% %TIME%] SUCCESS: Packages downloaded via secondary index to "%WHEEL_DIR%"
     )
 ) else (
-    echo [%DATE% %TIME%] SUCCESS: Packages downloaded via official PyPI to "%WHEEL_DIR%"
+    echo [%DATE% %TIME%] SUCCESS: Packages downloaded via primary index to "%WHEEL_DIR%"
 )
 
 rem 4. Create target installation directory if it does not exist
